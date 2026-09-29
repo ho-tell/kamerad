@@ -34,11 +34,12 @@ There is also an action, **Camera start/stop recording**, for buttons that can s
 
 No developer mode needed. This is Hammerhead's way to install an app that is not in the Karoo's extension library.
 
-1. On your phone, open [kamerad.apk](https://tellioglu.at/kamerad/kamerad.apk) and download it (or copy its link).
-2. **Share** the file (or the link) to the **Hammerhead Companion App**.
-3. The Karoo shows an **Install** screen. Tap **Install**.
+1. On your phone, **share the link** `https://tellioglu.at/kamerad/kamerad.apk` to the **Hammerhead Companion App**. For example, on the [website](https://tellioglu.at/kamerad/) touch and hold the **Download** button and choose *Share link*.
+2. The Karoo downloads the file itself and shows an **Install** screen. Tap **Install**.
 
-According to Hammerhead you need Karoo software 1.538.2049 or newer, the Companion App 1.36.0 (Android) or 1.12.0 (iPhone) or newer, the Karoo on Wi-Fi and a phone with internet. Sharing a link (instead of a file) only works on the newer Karoo. Details: [Hammerhead's sideloading guide](https://support.hammerhead.io/hc/en-us/articles/31576497036827-Companion-App-Sideloading).
+According to Hammerhead you need Karoo software 1.538.2049 or newer, the Companion App 1.36.0 (Android) or 1.12.0 (iPhone) or newer, the Karoo on Wi-Fi and a phone with internet. Hammerhead says that sharing a link only works on the newer Karoo (we tested it on a Karoo 3). Details: [Hammerhead's sideloading guide](https://support.hammerhead.io/hc/en-us/articles/31576497036827-Companion-App-Sideloading).
+
+**Sharing the file instead:** you can also download `kamerad.apk` on your phone and share the file. Then make sure the download has finished and that it is the newest file. Your phone uploads the file first, and an incomplete or old copy makes the Karoo show "Unknown error". Sharing the link avoids this.
 
 ### With a computer: adb
 
