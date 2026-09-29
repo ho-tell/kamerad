@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ExtensionInfo
+    displayName="@string/extension_name"
+    icon="@drawable/ic_kamerad"
+    id="kamerad"
+    scansDevices="false">
+    <DataType
+        description="@string/record_description"
+        displayName="@string/record_name"
+        graphical="true"
+        icon="@drawable/ic_kamerad"
+        typeId="record" />
+    <DataType
+        description="@string/battery_description"
+        displayName="@string/battery_name"
+        graphical="true"
+        icon="@drawable/ic_kamerad"
+        typeId="battery" />
+    <DataType
+        description="@string/power_description"
+        displayName="@string/power_name"
+        graphical="true"
+        icon="@drawable/ic_kamerad"
+        typeId="power" />
+    <BonusAction
+        actionId="toggle-recording"
+        displayName="@string/action_toggle_recording" />
+</ExtensionInfo>

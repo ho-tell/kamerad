@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Kamerad</string>
+    <string name="extension_name">Kamerad</string>
+    <string name="record_name">Camera Record</string>
+    <string name="record_description">Shows the camera state. Tap to start or stop recording.</string>
+    <string name="battery_name">Camera Battery</string>
+    <string name="battery_description">Battery level of the paired camera in percent.</string>
+    <string name="power_name">Camera On/Off</string>
+    <string name="power_description">Shows whether the camera is on. Tap to switch it on or off.</string>
+    <string name="action_toggle_recording">Camera start/stop recording</string>
+</resources>

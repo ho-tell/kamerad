@@ -1,0 +1,5 @@
+<resources>
+    <color name="alert_background">#FF16181D</color>
+    <color name="alert_text">#FFFFFFFF</color>
+    <color name="alert_error_background">#FFFF3B30</color>
+</resources>

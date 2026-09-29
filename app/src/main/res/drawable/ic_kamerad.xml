@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Colour Kamerad icon, a flat version of logo/kamerad-logo.svg (1024 grid). Readable on light and dark backgrounds. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+    <path android:fillColor="#FF1C1F26" android:pathData="M230,0h564a230,230 0 0 1 230,230v564a230,230 0 0 1 -230,230h-564a230,230 0 0 1 -230,-230v-564a230,230 0 0 1 230,-230z" />
+    <path android:strokeColor="#FFFF8A30" android:strokeWidth="38" android:strokeLineCap="round"
+        android:pathData="M752,196A66,66 0 0 1 818,262M752,130A132,132 0 0 1 884,262" />
+    <path android:fillColor="#FFFF4A40" android:pathData="M622,300h100a24,24 0 0 1 24,24v16a24,24 0 0 1 -24,24h-100a24,24 0 0 1 -24,-24v-16a24,24 0 0 1 24,-24z" />
+    <path android:fillColor="#FFF4F5F7" android:pathData="M328,342h368a96,96 0 0 1 96,96v248a96,96 0 0 1 -96,96h-368a96,96 0 0 1 -96,-96v-248a96,96 0 0 1 96,-96z" />
+    <path android:fillColor="#FF16181D" android:pathData="M346,386h146a70,70 0 0 1 70,70v146a70,70 0 0 1 -70,70h-146a70,70 0 0 1 -70,-70v-146a70,70 0 0 1 70,-70z" />
+    <path android:fillColor="#FF3A6EF5" android:pathData="M321,529a98,98 0 1 0 196,0a98,98 0 1 0 -196,0z" />
+    <path android:fillColor="#FF0A0C10" android:pathData="M373,529a46,46 0 1 0 92,0a46,46 0 1 0 -92,0z" />
+    <path android:fillColor="#D9FFFFFF" android:pathData="M434,494a18,18 0 1 0 36,0a18,18 0 1 0 -36,0z" />
+    <path android:fillColor="#FF16181D" android:pathData="M624,400h96a26,26 0 0 1 26,26v76a26,26 0 0 1 -26,26h-96a26,26 0 0 1 -26,-26v-76a26,26 0 0 1 26,-26z" />
+    <path android:fillColor="#FFFF4A40" android:pathData="M642,690a30,30 0 1 0 60,0a30,30 0 1 0 -60,0z" />
+</vector>
