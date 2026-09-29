@@ -18,6 +18,8 @@ Three tiles for your data pages:
 
 There is also an action, **Camera start/stop recording**, for buttons that can start extension actions.
 
+**Kamerad is deliberately simple.** It does these few things and nothing else. If you want more features, such as recording automatically with your ride, highlight markers, photo mode, video settings or SD card status, have a look at **[ClipRide](https://github.com/yrkan/clipride)**, a more full-featured open-source GoPro extension for the Karoo.
+
 ## What you need
 
 - A Hammerhead Karoo (tested on a Karoo 3)
