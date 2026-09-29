@@ -36,6 +36,13 @@ There is also an action, **Camera start/stop recording**, for buttons that can s
 
 Kamerad now appears under **Extensions** on the Karoo.
 
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/extension-list.png" width="200"><br>Extensions list</td>
+    <td align="center"><img src="docs/images/extension-page.png" width="200"><br>Kamerad's page</td>
+  </tr>
+</table>
+
 ## Set up
 
 1. On the Karoo open **Extensions → Kamerad → Open** and allow Bluetooth.
