@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kamerad – control your GoPro from your Karoo</title>
+<meta name="description" content="Kamerad is a free, simple extension for the Hammerhead Karoo: start and stop your GoPro, switch it on and off and see its battery, with big tiles on a data page.">
+<meta name="theme-color" content="#1c1f26">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="kamerad.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Kamerad – control your GoPro from your Karoo">
+<meta property="og:description" content="Start and stop your GoPro, switch it on and off and see its battery, with big tiles on a Karoo data page. Free and open source.">
+<meta property="og:url" content="https://tellioglu.at/kamerad/">
+<meta property="og:image" content="https://tellioglu.at/kamerad/images/tiles-ready.png">
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --text: #1c1f26;
+    --muted: #5b6270;
+    --line: #e3e6ea;
+    --blue: #0a84d6;
+    --blue-dark: #0869ab;
+    --orange: #e07800;
+    --red: #d7261e;
+    --green: #2ea44f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12141a;
+      --card: #1c1f26;
+      --text: #eef0f3;
+      --muted: #a3aab6;
+      --line: #2c303a;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  a { color: var(--blue); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(160deg, #262a33 0%, #0d0f13 100%);
+    color: #fff;
+    padding: 56px 0 64px;
+  }
+  .hero .wrap {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 40px;
+    align-items: center;
+  }
+  .brand { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+  .brand img { width: 72px; height: 72px; border-radius: 16px; }
+  .brand span { font-size: 15px; letter-spacing: .08em; text-transform: uppercase; color: #aab1bd; }
+  h1 { font-size: clamp(34px, 6vw, 54px); line-height: 1.1; margin: 0 0 16px; letter-spacing: -.02em; }
+  .lead { font-size: 20px; color: #d5d9e0; margin: 0 0 28px; max-width: 34em; }
+  .buttons { display: flex; flex-wrap: wrap; gap: 12px; }
+  .btn {
+    display: inline-block;
+    padding: 13px 22px;
+    border-radius: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 2px solid transparent;
+  }
+  .btn.primary { background: var(--blue); color: #fff; }
+  .btn.primary:hover { background: var(--blue-dark); }
+  .btn.ghost { border-color: #4a505c; color: #fff; }
+  .btn.ghost:hover { border-color: #fff; }
+  .hero-shot { justify-self: center; }
+  .shot {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 18px;
+    border: 5px solid #000;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+  }
+  .hero-shot .shot { width: 250px; }
+  .small-note { margin: 14px 0 0; font-size: 14px; color: #aab1bd; }
+
+  /* Sections */
+  section { padding: 56px 0 8px; }
+  h2 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -.01em; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 22px;
+  }
+  .card h3 { margin: 0 0 6px; font-size: 19px; }
+  .card p { margin: 0; color: var(--muted); }
+  .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+  .gallery { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-top: 32px; }
+  .gallery figure { margin: 0; text-align: center; }
+  .gallery .shot { border-width: 3px; border-radius: 12px; box-shadow: 0 4px 14px rgba(0, 0, 0, .2); }
+  figcaption { margin-top: 10px; font-size: 14px; color: var(--muted); }
+
+  ol.steps { list-style: none; counter-reset: step; padding: 0; margin: 0; display: grid; gap: 14px; }
+  ol.steps li {
+    counter-increment: step;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 18px 20px 18px 68px;
+    position: relative;
+  }
+  ol.steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 20px; top: 18px;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--blue);
+    color: #fff;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps strong { display: block; margin-bottom: 2px; }
+  code {
+    background: rgba(127, 127, 127, .16);
+    border-radius: 6px;
+    padding: 2px 7px;
+    font: 15px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  ul.tips { margin: 0; padding-left: 22px; }
+  ul.tips li { margin: 6px 0; }
+  .notice {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 5px solid var(--blue);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+  .notice p { margin: 0 0 8px; }
+  .notice p:last-child { margin: 0; }
+  #release { margin-top: 24px; }
+  #release[hidden] { display: none; }
+
+  footer { margin-top: 64px; padding: 32px 0 48px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+  footer p { margin: 0 0 8px; }
+
+  @media (max-width: 820px) {
+    .hero .wrap { grid-template-columns: 1fr; }
+    .hero-shot { margin-top: 8px; }
+    .hero-shot .shot { width: 200px; }
+    .cards { grid-template-columns: 1fr; }
+    .gallery { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 520px) {
+    .gallery { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <div class="brand">
+        <img src="kamerad.png" alt="Kamerad logo: a small action camera">
+        <span>for Hammerhead Karoo</span>
+      </div>
+      <h1>Your GoPro's buddy on the bike.</h1>
+      <p class="lead">Kamerad lets you start and stop your GoPro, switch it on and off and keep an eye on its battery, right from your Karoo, with big tiles you can hit with a glove.</p>
+      <div class="buttons">
+        <a class="btn primary" href="kamerad.apk" id="download">Download for Karoo</a>
+        <a class="btn ghost" href="https://github.com/ho-tell/kamerad">View on GitHub</a>
+      </div>
+      <p class="small-note">Free and open source. “Kamerad” is German for “buddy”.</p>
+    </div>
+    <div class="hero-shot">
+      <img class="shot" src="images/tiles-ready.png" width="480" height="800" alt="Three Kamerad tiles on a Karoo screen: record, camera battery and camera on/off">
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="what">
+    <h2>Three simple tiles</h2>
+    <p class="sub">Add them to any data page of your Karoo and you are done.</p>
+    <div class="cards">
+      <div class="card">
+        <h3><span class="dot" style="background:var(--red)"></span>Camera Record</h3>
+        <p>Tap to start recording. Tap twice to stop, so a bumpy road can’t end your clip by accident. Shows the recording time.</p>
+      </div>
+      <div class="card">
+        <h3><span class="dot" style="background:var(--blue)"></span>Camera Battery</h3>
+        <p>The battery level of your camera at a glance, with an icon that fills up with the charge.</p>
+      </div>
+      <div class="card">
+        <h3><span class="dot" style="background:var(--green)"></span>Camera On/Off</h3>
+        <p>Switch the camera on before the ride and off afterwards. Switching off during a recording stops it first.</p>
+      </div>
+    </div>
+
+    <div class="gallery">
+      <figure>
+        <img class="shot" src="images/tiles-recording.png" width="480" height="800" loading="lazy" alt="The record tile turns red and shows the recording time">
+        <figcaption>Recording</figcaption>
+      </figure>
+      <figure>
+        <img class="shot" src="images/tiles-confirm-off.png" width="480" height="800" loading="lazy" alt="The on/off tile turns orange and asks for a second tap">
+        <figcaption>Tap again to confirm</figcaption>
+      </figure>
+      <figure>
+        <img class="shot" src="images/tiles-off.png" width="480" height="800" loading="lazy" alt="All tiles grey while the camera is off">
+        <figcaption>Camera off</figcaption>
+      </figure>
+      <figure>
+        <img class="shot" src="images/tiles-starting.png" width="480" height="800" loading="lazy" alt="All tiles show Starting while the camera wakes up">
+        <figcaption>Camera waking up</figcaption>
+      </figure>
+      <figure>
+        <img class="shot" src="images/app-main.png" width="480" height="800" loading="lazy" alt="The small Kamerad app with a connected camera">
+        <figcaption>The Kamerad app</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="setup">
+    <h2>Set up in a few minutes</h2>
+    <p class="sub">You need a Hammerhead Karoo, a GoPro (HERO9 or newer works best) and a computer with <a href="https://developer.android.com/tools/releases/platform-tools">adb</a> for the one-time install.</p>
+    <ol class="steps">
+      <li>
+        <strong>Install Kamerad</strong>
+        Download the <a href="kamerad.apk">APK</a>, turn on USB debugging on your Karoo (Settings → About → tap “Build number” 7 times, then Settings → Developer options) and run <code>adb install kamerad.apk</code>.
+      </li>
+      <li>
+        <strong>Pair your camera</strong>
+        Open Kamerad on the Karoo (Extensions → Kamerad → Open) and allow Bluetooth. On the GoPro swipe down and go to Preferences → Wireless Connections → Connect Device → GoPro Quik App. Then tap “Search for cameras” in Kamerad and tap your camera.
+      </li>
+      <li>
+        <strong>Add the tiles</strong>
+        In your Karoo profile open a data page, tap “Add field”, choose Kamerad and pick the tiles you like.
+      </li>
+      <li>
+        <strong>Ride</strong>
+        Tap the tile to record. That’s it.
+      </li>
+    </ol>
+    <p class="sub" style="margin-top:14px">The full guide with pictures is on <a href="https://github.com/ho-tell/kamerad#readme">GitHub</a>.</p>
+  </section>
+
+  <section id="good-to-know">
+    <h2>Good to know</h2>
+    <ul class="tips">
+      <li>Tested with a GoPro HERO11 Black. A HERO8 works too, but it can’t be switched <em>on</em> from the Karoo: use its own button.</li>
+      <li>Kamerad only talks to the camera while a tile is on screen, so your GoPro can go to sleep the rest of the time.</li>
+      <li>Waking a sleeping camera takes a few seconds. The tiles say “Waiting…” and then “Starting…”.</li>
+    </ul>
+  </section>
+
+  <section id="simple">
+    <h2>Simple on purpose</h2>
+    <div class="notice">
+      <p>Kamerad does a few things and nothing else. If you want more features, such as recording automatically with your ride, highlight markers, photo mode, video settings or SD card status, have a look at <a href="https://github.com/yrkan/clipride"><strong>ClipRide</strong></a>, a more full-featured open-source GoPro extension for the Karoo.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><a href="https://github.com/ho-tell/kamerad">Source code on GitHub</a> · <a href="kamerad.apk">Download</a> · Free software under the <a href="https://github.com/ho-tell/kamerad/blob/main/LICENSE">MIT License</a></p>
+    <p>GoPro and HERO are trademarks of GoPro, Inc. Kamerad is not affiliated with or endorsed by GoPro or Hammerhead.</p>
+    <p>Made by Horst Tellioglu.</p>
+  </div>
+</footer>
+
+<script>
+  // Show the current version and release notes from the same manifest the Karoo uses
+  fetch("manifest", { cache: "no-cache" })
+    .then(function (r) { return r.json(); })
+    .then(function (m) {
+      document.querySelector("[data-version]").textContent = m.latestVersion;
+      document.querySelector("[data-notes]").textContent = m.releaseNotes || "";
+      document.getElementById("release").hidden = false;
+      document.getElementById("download").textContent = "Download for Karoo (v" + m.latestVersion + ")";
+    })
+    .catch(function () { /* the page works without it */ });
+</script>
+</body>
+</html>
