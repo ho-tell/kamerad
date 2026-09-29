@@ -26,19 +26,31 @@ There is also an action, **Camera start/stop recording**, for buttons that can s
 
 - A Hammerhead Karoo (tested on a Karoo 3)
 - A GoPro HERO9 or newer (tested with a HERO11 Black). A HERO8 works too, but it cannot be switched *on* from the Karoo: use its own button.
-- A computer with `adb` (part of Google's [platform-tools](https://developer.android.com/tools/releases/platform-tools)) to install the app once
+- Your phone with the Hammerhead Companion App to install the app once (or a computer with `adb`, see below)
 
 ## Install
 
+### Without a computer: use your phone
+
+No developer mode needed. This is Hammerhead's way to install an app that is not in the Karoo's extension library.
+
+1. On your phone, open [kamerad.apk](https://tellioglu.at/kamerad/kamerad.apk) and download it (or copy its link).
+2. **Share** the file (or the link) to the **Hammerhead Companion App**.
+3. The Karoo shows an **Install** screen. Tap **Install**.
+
+According to Hammerhead you need Karoo software 1.538.2049 or newer, the Companion App 1.36.0 (Android) or 1.12.0 (iPhone) or newer, the Karoo on Wi-Fi and a phone with internet. Sharing a link (instead of a file) only works on the newer Karoo. Details: [Hammerhead's sideloading guide](https://support.hammerhead.io/hc/en-us/articles/31576497036827-Companion-App-Sideloading).
+
+### With a computer: adb
+
 1. Download [kamerad.apk](https://tellioglu.at/kamerad/kamerad.apk).
 2. On the Karoo: **Settings → About**, tap **Build number** 7 times. Then **Settings → Developer options → USB debugging** on.
-3. Connect the Karoo to your computer with a USB-C cable and run:
+3. Connect the Karoo to your computer with a USB-C cable and run (`adb` is part of Google's [platform-tools](https://developer.android.com/tools/releases/platform-tools)):
 
    ```
    adb install kamerad.apk
    ```
 
-Kamerad now appears under **Extensions** on the Karoo.
+Either way, Kamerad now appears under **Extensions** on the Karoo.
 
 <table>
   <tr>
