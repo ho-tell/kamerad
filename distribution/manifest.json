@@ -3,9 +3,9 @@
   "packageName": "at.tellioglu.kamerad",
   "iconUrl": "https://tellioglu.at/kamerad/kamerad.png",
   "latestApkUrl": "https://tellioglu.at/kamerad/kamerad.apk",
-  "latestVersion": "1.2.5",
-  "latestVersionCode": 10,
+  "latestVersion": "1.2.6",
+  "latestVersionCode": 11,
   "developer": "Horst Tellioglu",
   "description": "Control your action camera (e.g. GoPro Hero) from your Karoo.\n\nGoPro and HERO are trademarks of GoPro, Inc. Kamerad is not affiliated with or endorsed by GoPro or Hammerhead.",
-  "releaseNotes": "The tiles show \"Starting…\" while a camera that is waking up is answering, and a tap on Record right after switching the camera on no longer fails: Kamerad now waits until the camera accepts commands."
+  "releaseNotes": "Switching the camera off while it is recording now works: Kamerad stops the recording first, waits until it is saved, and then switches the camera off. The On/Off tile says \"Also stops recording\" when you confirm."
 }
