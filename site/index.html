@@ -127,7 +127,8 @@
     font-weight: 700;
     display: flex; align-items: center; justify-content: center;
   }
-  ol.steps strong { display: block; margin-bottom: 2px; }
+  /* Only the step title (first element of the step) is a block; bold words inside the text stay inline */
+  ol.steps li > strong:first-child { display: block; margin-bottom: 2px; }
   code {
     background: rgba(127, 127, 127, .16);
     border-radius: 6px;
@@ -170,13 +171,13 @@
         <img src="kamerad.png" alt="Kamerad logo: a small action camera">
         <span>for Hammerhead Karoo</span>
       </div>
-      <h1>Your GoPro's buddy on the bike.</h1>
+      <h1>Control your GoPro from your bike.</h1>
       <p class="lead">Kamerad lets you start and stop your GoPro, switch it on and off and keep an eye on its battery, right from your Karoo, with big tiles you can hit with a glove.</p>
       <div class="buttons">
         <a class="btn primary" href="kamerad.apk" id="download">Download for Karoo</a>
         <a class="btn ghost" href="https://github.com/ho-tell/kamerad">View on GitHub</a>
       </div>
-      <p class="small-note">Free and open source. “Kamerad” is German for “buddy”.</p>
+      <p class="small-note">Free and open source.</p>
     </div>
     <div class="hero-shot">
       <img class="shot" src="images/tiles-ready.png" width="480" height="800" alt="Three Kamerad tiles on a Karoo screen: record, camera battery and camera on/off">
@@ -234,7 +235,7 @@
     <ol class="steps">
       <li>
         <strong>Install Kamerad</strong>
-        On your phone, open the <a href="kamerad.apk">APK</a> and share it to the <strong>Hammerhead Companion App</strong>. Then tap <strong>Install</strong> on your Karoo. No computer and no developer mode needed. Hammerhead asks for recent Karoo software and Companion App and for the Karoo to be on Wi-Fi: see <a href="https://support.hammerhead.io/hc/en-us/articles/31576497036827-Companion-App-Sideloading">their sideloading guide</a>.
+        On your phone, open the downloaded <a href="kamerad.apk">APK</a> file and share it to the <strong>Hammerhead Companion App</strong>. Then tap <strong>Install</strong> on your Karoo. No computer and no developer mode needed. Hammerhead asks for recent Karoo software and Companion App and for the Karoo to be on Wi-Fi: see <a href="https://support.hammerhead.io/hc/en-us/articles/31576497036827-Companion-App-Sideloading">their sideloading guide</a>.
         <br>Prefer a computer? Turn on USB debugging on your Karoo (Settings → About → tap “Build number” 7 times, then Settings → Developer options) and run <code>adb install kamerad.apk</code>.
       </li>
       <li>
