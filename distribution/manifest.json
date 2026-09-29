@@ -3,9 +3,9 @@
   "packageName": "at.tellioglu.kamerad",
   "iconUrl": "https://tellioglu.at/kamerad/kamerad.png",
   "latestApkUrl": "https://tellioglu.at/kamerad/kamerad.apk",
-  "latestVersion": "1.2.9",
-  "latestVersionCode": 14,
+  "latestVersion": "1.2.10",
+  "latestVersionCode": 15,
   "developer": "Horst Tellioglu",
   "description": "Control your action camera (e.g. GoPro Hero) from your Karoo.\n\nGoPro and HERO are trademarks of GoPro, Inc. Kamerad is not affiliated with or endorsed by GoPro or Hammerhead.",
-  "releaseNotes": "No changes to the app itself. The installation guide (tellioglu.at/kamerad) now explains how to install Kamerad from your phone with the Hammerhead Companion App, without a computer."
+  "releaseNotes": "No changes to the app itself. The website (tellioglu.at/kamerad) now explains where the name comes from: Kamera (camera) + Rad, German for bicycle or bike."
 }
