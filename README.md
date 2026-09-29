@@ -103,3 +103,5 @@ Build instructions and code layout: [docs/DEVELOPING.md](docs/DEVELOPING.md).
 [MIT](LICENSE). Kamerad is built on Hammerhead's [karoo-ext](https://github.com/hammerheadnav/karoo-ext); see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 GoPro and HERO are trademarks of GoPro, Inc. Kamerad is not affiliated with or endorsed by GoPro or Hammerhead.
+
+Built with [Claude](https://claude.com/claude-code).

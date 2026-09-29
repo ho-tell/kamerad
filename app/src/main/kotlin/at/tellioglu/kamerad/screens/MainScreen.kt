@@ -239,7 +239,7 @@ private fun AboutScreen(onClose: () -> Unit) {
             "GoPro and HERO are trademarks of GoPro, Inc. Kamerad is not affiliated with or endorsed by GoPro or Hammerhead.",
             style = MaterialTheme.typography.bodyMedium,
         )
-        Text("© 2026 Horst Tellioglu. MIT License.", style = MaterialTheme.typography.bodySmall)
+        Text("© 2026 Horst Tellioglu. MIT License. Built with Claude.", style = MaterialTheme.typography.bodySmall)
         Text(
             "Built on the Karoo extension library karoo-ext by Hammerhead (Apache License 2.0).",
             style = MaterialTheme.typography.bodySmall,
