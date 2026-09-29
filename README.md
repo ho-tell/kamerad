@@ -2,6 +2,8 @@
 
 Control your **GoPro** from your **Hammerhead Karoo**: start and stop recording, switch the camera on and off, and see its battery, all with big tiles on a data page.
 
+**Website: [tellioglu.at/kamerad](https://tellioglu.at/kamerad/)**
+
 <p align="center">
   <img src="docs/images/tiles-ready.png" width="240" alt="The three Kamerad tiles on a Karoo data page">
 </p>
