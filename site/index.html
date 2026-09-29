@@ -145,8 +145,6 @@
   }
   .notice p { margin: 0 0 8px; }
   .notice p:last-child { margin: 0; }
-  #release { margin-top: 24px; }
-  #release[hidden] { display: none; }
 
   footer { margin-top: 64px; padding: 32px 0 48px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
   footer p { margin: 0 0 8px; }
@@ -281,13 +279,10 @@
 </footer>
 
 <script>
-  // Show the current version and release notes from the same manifest the Karoo uses
+  // Show the current version on the download button, from the same manifest the Karoo uses
   fetch("manifest", { cache: "no-cache" })
     .then(function (r) { return r.json(); })
     .then(function (m) {
-      document.querySelector("[data-version]").textContent = m.latestVersion;
-      document.querySelector("[data-notes]").textContent = m.releaseNotes || "";
-      document.getElementById("release").hidden = false;
       document.getElementById("download").textContent = "Download for Karoo (v" + m.latestVersion + ")";
     })
     .catch(function () { /* the page works without it */ });
