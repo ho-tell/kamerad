@@ -3,9 +3,9 @@
   "packageName": "at.tellioglu.kamerad",
   "iconUrl": "https://tellioglu.at/kamerad/kamerad.png",
   "latestApkUrl": "https://tellioglu.at/kamerad/kamerad.apk",
-  "latestVersion": "1.2.13",
-  "latestVersionCode": 18,
+  "latestVersion": "1.2.14",
+  "latestVersionCode": 19,
   "developer": "Horst Tellioglu",
   "description": "Control your action camera (e.g. GoPro Hero) from your Karoo.\n\nGoPro and HERO are trademarks of GoPro, Inc. Kamerad is not affiliated with or endorsed by GoPro or Hammerhead.",
-  "releaseNotes": "The About page in the app now says that Kamerad was built with Claude. No other changes to the app."
+  "releaseNotes": "The Kamerad app now has the round back button in the lower left corner, like the Karoo's own screens. Nothing else changed."
 }
