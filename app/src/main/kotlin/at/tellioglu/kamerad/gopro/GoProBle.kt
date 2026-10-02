@@ -29,8 +29,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import java.util.UUID
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 data class FoundCamera(val address: String, val name: String)
@@ -93,7 +95,11 @@ suspend fun bondWithCamera(context: Context, address: String) {
  * Create a new instance per connection attempt and [close] it afterwards.
  */
 @SuppressLint("MissingPermission")
-class GoProBle(private val context: Context, address: String) {
+/**
+ * @param autoConnect false: a direct connection attempt, which is quick when the camera is advertising but
+ *   gives up; true: Android's background connection, which waits patiently but can take much longer
+ */
+class GoProBle(private val context: Context, address: String, private val autoConnect: Boolean = true) {
     private val device = context.bluetoothAdapter().getRemoteDevice(address)
     private var gatt: BluetoothGatt? = null
     private val opMutex = Mutex()
@@ -149,14 +155,26 @@ class GoProBle(private val context: Context, address: String) {
 
     /**
      * Connects (waiting until the camera is in range) and discovers services.
+     * @param linkTimeout give up waiting for the camera to answer after this long (null: wait for ever)
      * @param onLinkUp called once the Bluetooth link is up, i.e. the camera has answered
      *   (it may still be booting: service discovery can take several seconds more)
+     * @return false if the camera didn't answer within [linkTimeout]
      */
-    suspend fun connect(onLinkUp: () -> Unit = {}) {
-        gatt = device.connectGatt(context, true, callback, BluetoothDevice.TRANSPORT_LE)
-        connected.await()
+    suspend fun connect(linkTimeout: Duration? = null, onLinkUp: () -> Unit = {}): Boolean {
+        gatt = device.connectGatt(context, autoConnect, callback, BluetoothDevice.TRANSPORT_LE)
+        val answered = if (linkTimeout == null) {
+            connected.await()
+            true
+        } else {
+            withTimeoutOrNull(linkTimeout) {
+                connected.await()
+                true
+            } ?: false
+        }
+        if (!answered) return false
         onLinkUp()
         op("Service discovery") { it.discoverServices() }
+        return true
     }
 
     suspend fun write(uuid: UUID, value: ByteArray) {

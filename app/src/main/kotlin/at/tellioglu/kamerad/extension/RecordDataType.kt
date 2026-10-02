@@ -41,6 +41,9 @@ class RecordDataType(extension: String) : ButtonTileDataType(extension, TYPE_ID)
             else -> error("unreachable")
         }
 
+    override fun previewModel(compact: Boolean) =
+        TileModel("● REC", "Tap to record", TileModel.READY_BLUE, subtitleBattery = SAMPLE_BATTERY.takeUnless { compact })
+
     private fun formatDuration(since: Long?): String {
         val seconds = since?.let { (SystemClock.elapsedRealtime() - it) / 1000 }?.coerceAtLeast(0) ?: 0
         val h = seconds / 3600

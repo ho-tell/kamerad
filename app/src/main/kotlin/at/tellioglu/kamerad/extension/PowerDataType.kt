@@ -48,6 +48,14 @@ class PowerDataType(extension: String) : ButtonTileDataType(extension, TYPE_ID) 
             else -> error("unreachable")
         }
 
+    override fun previewModel(compact: Boolean) = TileModel(
+        "ON",
+        "Tap to switch off",
+        TileModel.READY_BLUE,
+        icon = TileIcon.Switch(on = true),
+        subtitleBattery = SAMPLE_BATTERY.takeUnless { compact },
+    )
+
     companion object {
         const val TYPE_ID = "power"
     }

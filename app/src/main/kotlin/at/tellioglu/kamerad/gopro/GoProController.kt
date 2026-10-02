@@ -39,6 +39,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
@@ -93,6 +94,8 @@ object GoProController {
     private val LINGER = 2.minutes
     private val KEEP_ALIVE_INTERVAL = 3.seconds
     private val READY_TIMEOUT = 20.seconds
+    private val DIRECT_CONNECT_TIMEOUT = 8.seconds
+    private val BACKGROUND_CONNECT_WINDOW = 30.seconds
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private lateinit var appContext: Context
@@ -302,7 +305,13 @@ object GoProController {
         }
     }
 
+    /**
+     * Keeps trying to connect while the camera is wanted. Android's background connection (autoConnect) is
+     * patient but slow (10 to 30 s was normal), a direct connection is quick when the camera is advertising
+     * but gives up. So the two alternate, starting with a direct attempt.
+     */
     private suspend fun connectLoop(camera: PairedCamera) {
+        var attempt = 0
         while (true) {
             if (!hasBluetoothPermission()) {
                 _state.value = CameraState.NoPermission
@@ -310,9 +319,15 @@ object GoProController {
                 continue
             }
             _state.value = CameraState.Searching
-            val ble = GoProBle(appContext, camera.address)
+            val direct = attempt++ % 2 == 0
+            val ble = GoProBle(appContext, camera.address, autoConnect = !direct)
+            var cameraWasReady = false
             try {
-                runSession(ble)
+                runSession(ble, direct, linkTimeout = if (direct) DIRECT_CONNECT_TIMEOUT else BACKGROUND_CONNECT_WINDOW)
+                cameraWasReady = true
+            } catch (e: CameraNotAnsweringException) {
+                Log.i(TAG, "No answer from the camera (${if (direct) "direct" else "background"} attempt), trying again")
+                continue
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -321,12 +336,17 @@ object GoProController {
                 currentBle = null
                 ble.close()
             }
+            // After a lost connection start over with a direct attempt
+            if (cameraWasReady) attempt = 0
             _state.value = CameraState.Searching
             delay(5.seconds)
         }
     }
 
-    private suspend fun runSession(ble: GoProBle) = coroutineScope {
+    /** The camera didn't answer within the time allowed for this connection attempt. */
+    private class CameraNotAnsweringException : Exception()
+
+    private suspend fun runSession(ble: GoProBle, direct: Boolean, linkTimeout: Duration) = coroutineScope {
         val commandPackets = PacketAccumulator()
         val queryPackets = PacketAccumulator()
         launch(start = CoroutineStart.UNDISPATCHED) {
@@ -340,14 +360,15 @@ object GoProController {
             }
         }
 
-        Log.i(TAG, "Connecting to camera")
+        Log.i(TAG, "Connecting to camera (${if (direct) "direct" else "background"})")
         val started = SystemClock.elapsedRealtime()
         fun elapsed() = "${(SystemClock.elapsedRealtime() - started) / 1000.0} s"
-        ble.connect(onLinkUp = {
+        val answered = ble.connect(linkTimeout, onLinkUp = {
             // The camera has answered; it may take a few more seconds until it is ready
             _state.value = CameraState.Starting
             Log.i(TAG, "Camera answered (link up) after ${elapsed()}")
         })
+        if (!answered) throw CameraNotAnsweringException()
         Log.i(TAG, "Camera services discovered after ${elapsed()}")
         ble.enableNotifications(GoProUuids.COMMAND_RESPONSE)
         ble.enableNotifications(GoProUuids.SETTING_RESPONSE)

@@ -81,6 +81,9 @@ data class TileModel(
     }
 }
 
+/** Battery level shown in the previews while a page is edited. */
+const val SAMPLE_BATTERY = 85
+
 sealed interface TileIcon {
     /** Toggle switch, knob on the right when [on]. */
     data class Switch(val on: Boolean) : TileIcon
@@ -110,6 +113,9 @@ abstract class ButtonTileDataType(extension: String, typeId: String) : DataTypeI
      */
     abstract fun model(state: CameraState, pending: TapConfirmation.Pending?, compact: Boolean): TileModel
 
+    /** Sample content shown while the Karoo page is edited: tiles don't connect to the camera there. */
+    abstract fun previewModel(compact: Boolean): TileModel
+
     override fun startView(context: Context, config: ViewConfig, emitter: ViewEmitter) {
         emitter.onNext(UpdateGraphicConfig(showHeader = false))
         // Hide the Karoo's standard stream container, which otherwise covers the lower part of the view
@@ -138,7 +144,9 @@ abstract class ButtonTileDataType(extension: String, typeId: String) : DataTypeI
             }
         }
         val job = CoroutineScope(Dispatchers.IO).launch {
-            combine(GoProController.state, TapConfirmation.pending, ticker) { state, pending, _ -> model(state, pending, compact) }
+            combine(GoProController.state, TapConfirmation.pending, ticker) { state, pending, _ ->
+                if (config.preview) previewModel(compact) else model(state, pending, compact)
+            }
                 .distinctUntilChanged()
                 .conflate()
                 .collect { model ->

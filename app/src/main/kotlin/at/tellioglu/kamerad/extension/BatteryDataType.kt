@@ -19,6 +19,9 @@ class BatteryDataType(extension: String) : ButtonTileDataType(extension, TYPE_ID
             else -> error("unreachable")
         }
 
+    override fun previewModel(compact: Boolean) =
+        TileModel("$SAMPLE_BATTERY%", "Camera battery", TileModel.READY_BLUE, icon = TileIcon.Battery(SAMPLE_BATTERY))
+
     companion object {
         const val TYPE_ID = "battery"
     }
