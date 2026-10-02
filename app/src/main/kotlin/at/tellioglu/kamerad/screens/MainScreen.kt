@@ -126,7 +126,7 @@ fun MainScreen(hasPermission: Boolean, onRequestPermission: () -> Unit) {
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = BACK_BUTTON_SPACE),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text("Kamerad", style = MaterialTheme.typography.headlineMedium)
@@ -229,7 +229,7 @@ private fun AboutScreen(onClose: () -> Unit) {
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = BACK_BUTTON_SPACE),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("About Kamerad", style = MaterialTheme.typography.headlineMedium)
@@ -275,3 +275,6 @@ private fun statusText(state: CameraState, now: Long): String = when (state) {
         if (state.busy) append(" · Busy")
     }
 }
+
+/** Space at the bottom of the scrolling screens, so the last items don't hide behind the back button. */
+private val BACK_BUTTON_SPACE = 72.dp

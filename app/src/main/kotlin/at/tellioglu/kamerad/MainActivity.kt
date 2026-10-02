@@ -5,11 +5,16 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import at.tellioglu.kamerad.gopro.GoProController
+import at.tellioglu.kamerad.screens.KarooBackButton
 import at.tellioglu.kamerad.screens.MainScreen
 import at.tellioglu.kamerad.theme.AppTheme
 
@@ -34,7 +39,14 @@ class MainActivity : ComponentActivity() {
         val content = ComposeView(this).apply {
             setContent {
                 AppTheme {
-                    MainScreen(hasPermission = hasPermission, onRequestPermission = { permissionRequest.launch(permissions) })
+                    // The button lies over the screen, like the Karoo's own back button
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        MainScreen(hasPermission = hasPermission, onRequestPermission = { permissionRequest.launch(permissions) })
+                        KarooBackButton(
+                            onClick = { onBackPressedDispatcher.onBackPressed() },
+                            modifier = Modifier.align(Alignment.BottomStart),
+                        )
+                    }
                 }
             }
         }
