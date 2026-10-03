@@ -93,6 +93,7 @@ object GoProController {
     private const val KEY_MODEL = "model"
     private const val KEY_EMPTY_PERCENT = "empty_percent"
     private const val KEY_EMPTY_AT = "empty_at"
+    private const val KEY_LAST_BATTERY = "last_battery"
 
     /** A camera that vanishes while its battery was at or below this level has probably run out of battery. */
     private const val EMPTY_BATTERY_THRESHOLD = 10
@@ -164,6 +165,7 @@ object GoProController {
         }
         switchedOff.value = prefs.getBoolean(KEY_SWITCHED_OFF, false)
         _cameraModel.value = prefs.getString(KEY_MODEL, null)
+        if (prefs.contains(KEY_LAST_BATTERY)) lastBattery = prefs.getInt(KEY_LAST_BATTERY, 0)
         if (prefs.contains(KEY_EMPTY_PERCENT)) {
             _probablyEmpty.value = ProbablyEmpty(prefs.getInt(KEY_EMPTY_PERCENT, 0), prefs.getLong(KEY_EMPTY_AT, 0))
         }
@@ -186,6 +188,7 @@ object GoProController {
             remove(KEY_MODEL)
             remove(KEY_EMPTY_PERCENT)
             remove(KEY_EMPTY_AT)
+            remove(KEY_LAST_BATTERY)
         }.apply()
         _cameraModel.value = null
         _probablyEmpty.value = null
@@ -361,7 +364,9 @@ object GoProController {
                 runSession(ble, direct, linkTimeout = if (direct) DIRECT_CONNECT_TIMEOUT else BACKGROUND_CONNECT_WINDOW)
                 cameraWasReady = true
             } catch (e: CameraNotAnsweringException) {
-                event("No answer from the camera (${if (direct) "direct" else "background"} attempt), trying again")
+                // Only the first miss is logged: hundreds of identical lines would push out what matters
+                if (attempt == 1) event("No answer from the camera, trying again until it answers")
+                if (attempt >= 3) noteUnreachable()
                 continue
             } catch (e: CancellationException) {
                 throw e
@@ -398,6 +403,18 @@ object GoProController {
         } else {
             event("Connection to the camera lost (last battery level: ${percent ?: "unknown"}%, switched off by us: $switchedOffByUs)")
         }
+    }
+
+    /**
+     * The camera does not answer although we want it: if its last known battery level was low and we did not
+     * switch it off, it is probably empty (also when the connection was lost while the app was not running).
+     */
+    private fun noteUnreachable() {
+        val percent = lastBattery ?: return
+        val switchedOffByUs = SystemClock.elapsedRealtime() - sleepRequestedAt < 15_000 || switchedOff.value
+        if (switchedOffByUs || percent > EMPTY_BATTERY_THRESHOLD || _probablyEmpty.value != null) return
+        event("Camera not answering, last battery level was $percent%: probably empty")
+        setProbablyEmpty(ProbablyEmpty(percent, System.currentTimeMillis()))
     }
 
     private fun setProbablyEmpty(value: ProbablyEmpty?) {
@@ -519,6 +536,7 @@ object GoProController {
         }
         values[GoProStatus.BATTERY_PERCENT]?.let {
             val percent = it.toUnsignedInt().toInt()
+            if (lastBattery != percent) prefs.edit().putInt(KEY_LAST_BATTERY, percent).apply()
             lastBattery = percent
             // Every 10 %, and every single step when it gets low: the trail before a battery runs out
             val logged = lastLoggedBattery
