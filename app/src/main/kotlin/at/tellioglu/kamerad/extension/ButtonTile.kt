@@ -73,7 +73,15 @@ data class TileModel(
             CameraState.NotPaired -> TileModel("No camera", "Pair in Kamerad app", UNAVAILABLE)
             CameraState.NoPermission -> TileModel("No permission", "Open Kamerad app", UNAVAILABLE)
             // Connecting, or the camera is starting up
-            CameraState.Standby, CameraState.Searching -> TileModel("Waiting…", "for camera", UNAVAILABLE)
+            CameraState.Standby, CameraState.Searching -> {
+                val empty = GoProController.probablyEmpty.value
+                if (empty != null) {
+                    // Gone while the battery was low: it has probably run out
+                    TileModel("Empty?", "Battery was ${empty.percent}%", UNAVAILABLE, icon = TileIcon.Battery(empty.percent))
+                } else {
+                    TileModel("Waiting…", "for camera", UNAVAILABLE)
+                }
+            }
             // The camera has answered and is starting up: nothing to do but wait
             CameraState.Starting -> TileModel("Starting…", "camera responding", UNAVAILABLE)
             is CameraState.Off, is CameraState.Connected -> null
@@ -144,7 +152,7 @@ abstract class ButtonTileDataType(extension: String, typeId: String) : DataTypeI
             }
         }
         val job = CoroutineScope(Dispatchers.IO).launch {
-            combine(GoProController.state, TapConfirmation.pending, ticker) { state, pending, _ ->
+            combine(GoProController.state, TapConfirmation.pending, GoProController.probablyEmpty, ticker) { state, pending, _, _ ->
                 if (config.preview) previewModel(compact) else model(state, pending, compact)
             }
                 .distinctUntilChanged()

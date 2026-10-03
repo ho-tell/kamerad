@@ -1,6 +1,7 @@
 package at.tellioglu.kamerad.screens
 
 import android.os.SystemClock
+import android.text.format.DateUtils
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -46,6 +47,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.text.DateFormat
+import java.util.Date
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
@@ -144,7 +147,8 @@ fun MainScreen(hasPermission: Boolean, onRequestPermission: () -> Unit) {
         if (camera != null) {
             val model by GoProController.cameraModel.collectAsState()
             Text("Camera: ${camera.name}" + (model?.let { " ($it)" } ?: ""), style = MaterialTheme.typography.titleMedium)
-            Text(statusText(state, now))
+            val empty by GoProController.probablyEmpty.collectAsState()
+            Text(statusText(state, now, empty))
             val connected = state as? CameraState.Connected
             Button(
                 onClick = { GoProController.toggleRecording(announce = false) },
@@ -256,10 +260,15 @@ private fun ForgetCameraButton() {
     }
 }
 
-private fun statusText(state: CameraState, now: Long): String = when (state) {
+private fun statusText(state: CameraState, now: Long, empty: GoProController.ProbablyEmpty?): String = when (state) {
     CameraState.NotPaired -> "Not paired"
     CameraState.NoPermission -> "Bluetooth permission missing"
-    CameraState.Standby, CameraState.Searching -> "Waiting for camera…"
+    CameraState.Standby, CameraState.Searching ->
+        if (empty != null) {
+            "Camera is off. Its battery was ${empty.percent}% at ${emptyTime(empty.atMillis)}: probably empty."
+        } else {
+            "Waiting for camera…"
+        }
     CameraState.Starting -> "Camera responding, starting up…"
     is CameraState.Off -> if (state.canWake) "Switched off" else "Switched off – switch it on with its button, then tap Reconnect"
     is CameraState.Connected -> buildString {
@@ -278,3 +287,13 @@ private fun statusText(state: CameraState, now: Long): String = when (state) {
 
 /** Space at the bottom of the scrolling screens, so the last items don't hide behind the back button. */
 private val BACK_BUTTON_SPACE = 72.dp
+
+/** "14:05", or "2 Oct 2026, 14:05" if it wasn't today (in the language of the device). */
+private fun emptyTime(millis: Long): String {
+    val format = if (DateUtils.isToday(millis)) {
+        DateFormat.getTimeInstance(DateFormat.SHORT)
+    } else {
+        DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+    }
+    return format.format(Date(millis))
+}

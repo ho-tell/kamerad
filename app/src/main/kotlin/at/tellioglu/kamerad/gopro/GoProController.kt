@@ -91,6 +91,11 @@ object GoProController {
     private const val KEY_NAME = "name"
     private const val KEY_SWITCHED_OFF = "switched_off"
     private const val KEY_MODEL = "model"
+    private const val KEY_EMPTY_PERCENT = "empty_percent"
+    private const val KEY_EMPTY_AT = "empty_at"
+
+    /** A camera that vanishes while its battery was at or below this level has probably run out of battery. */
+    private const val EMPTY_BATTERY_THRESHOLD = 10
     private val LINGER = 2.minutes
     private val KEEP_ALIVE_INTERVAL = 3.seconds
     private val READY_TIMEOUT = 20.seconds
@@ -105,6 +110,24 @@ object GoProController {
     val pairedCamera: StateFlow<PairedCamera?> = _pairedCamera.asStateFlow()
 
     /** Model name reported by the paired camera, e.g. "HERO8 Black" (remembered, as a sleeping camera can't be asked). */
+    /**
+     * The camera vanished from Bluetooth (not switched off by Kamerad) while its battery was low: it has
+     * probably run out of battery. The camera can't tell this, so it is a guess from the last battery level.
+     */
+    data class ProbablyEmpty(val percent: Int, val atMillis: Long)
+
+    private val _probablyEmpty = MutableStateFlow<ProbablyEmpty?>(null)
+    val probablyEmpty: StateFlow<ProbablyEmpty?> = _probablyEmpty.asStateFlow()
+
+    @Volatile
+    private var lastBattery: Int? = null
+
+    @Volatile
+    private var sleepRequestedAt = 0L
+
+    @Volatile
+    private var sessionReady = false
+
     private val _cameraModel = MutableStateFlow<String?>(null)
     val cameraModel: StateFlow<String?> = _cameraModel.asStateFlow()
 
@@ -138,6 +161,9 @@ object GoProController {
         }
         switchedOff.value = prefs.getBoolean(KEY_SWITCHED_OFF, false)
         _cameraModel.value = prefs.getString(KEY_MODEL, null)
+        if (prefs.contains(KEY_EMPTY_PERCENT)) {
+            _probablyEmpty.value = ProbablyEmpty(prefs.getInt(KEY_EMPTY_PERCENT, 0), prefs.getLong(KEY_EMPTY_AT, 0))
+        }
         scope.launch { manageConnection() }
     }
 
@@ -155,8 +181,12 @@ object GoProController {
                 putString(KEY_NAME, camera.name)
             }
             remove(KEY_MODEL)
+            remove(KEY_EMPTY_PERCENT)
+            remove(KEY_EMPTY_AT)
         }.apply()
         _cameraModel.value = null
+        _probablyEmpty.value = null
+        lastBattery = null
         setSwitchedOff(false)
         _pairedCamera.value = camera
     }
@@ -241,6 +271,7 @@ object GoProController {
 
     /** Puts the camera to sleep; it may still refuse for a moment while it finishes saving a recording. */
     private suspend fun sleepWithRetry() {
+        sleepRequestedAt = SystemClock.elapsedRealtime()
         repeat(6) { attempt ->
             Log.i(TAG, "Sleep")
             try {
@@ -336,11 +367,41 @@ object GoProController {
                 currentBle = null
                 ble.close()
             }
+            if (sessionReady) {
+                sessionReady = false
+                noteConnectionLost()
+            }
             // After a lost connection start over with a direct attempt
             if (cameraWasReady) attempt = 0
             _state.value = CameraState.Searching
             delay(5.seconds)
         }
+    }
+
+    /** A working connection ended; if the camera was not switched off by us and its battery was low, it is probably empty. */
+    private fun noteConnectionLost() {
+        val percent = lastBattery
+        val switchedOffByUs = SystemClock.elapsedRealtime() - sleepRequestedAt < 15_000 || switchedOff.value
+        if (!switchedOffByUs && percent != null && percent <= EMPTY_BATTERY_THRESHOLD) {
+            Log.i(TAG, "Camera vanished at $percent% battery: probably empty")
+            setProbablyEmpty(ProbablyEmpty(percent, System.currentTimeMillis()))
+        } else {
+            Log.i(TAG, "Connection to the camera lost (last battery level: ${percent ?: "unknown"}%, switched off by us: $switchedOffByUs)")
+        }
+    }
+
+    private fun setProbablyEmpty(value: ProbablyEmpty?) {
+        if (_probablyEmpty.value == value) return
+        _probablyEmpty.value = value
+        prefs.edit().apply {
+            if (value == null) {
+                remove(KEY_EMPTY_PERCENT)
+                remove(KEY_EMPTY_AT)
+            } else {
+                putInt(KEY_EMPTY_PERCENT, value.percent)
+                putLong(KEY_EMPTY_AT, value.atMillis)
+            }
+        }.apply()
     }
 
     /** The camera didn't answer within the time allowed for this connection attempt. */
@@ -377,6 +438,8 @@ object GoProController {
         // Stay in "Starting" until the camera accepts commands: right after waking up it still rejects them
         awaitCameraReady()
         _state.value = CameraState.Connected()
+        sessionReady = true
+        setProbablyEmpty(null)
         Log.i(TAG, "Camera ready after ${elapsed()}")
         ble.write(
             GoProUuids.QUERY,
@@ -442,6 +505,7 @@ object GoProController {
         values.filterKeys { it != GoProStatus.VIDEO_DURATION }.takeIf { it.isNotEmpty() }?.let { logged ->
             Log.d(TAG, "Status: " + logged.entries.joinToString { (id, value) -> "$id=${value.toUnsignedInt()}" })
         }
+        values[GoProStatus.BATTERY_PERCENT]?.let { lastBattery = it.toUnsignedInt().toInt() }
         _state.update { current ->
             if (current !is CameraState.Connected) return@update current
             var next: CameraState.Connected = current
