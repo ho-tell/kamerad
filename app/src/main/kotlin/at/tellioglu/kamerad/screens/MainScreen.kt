@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import at.tellioglu.kamerad.BuildConfig
 import at.tellioglu.kamerad.gopro.CameraState
+import at.tellioglu.kamerad.gopro.EventLog
 import at.tellioglu.kamerad.gopro.FoundCamera
 import at.tellioglu.kamerad.gopro.GoProController
 import at.tellioglu.kamerad.gopro.PairedCamera
@@ -63,9 +64,12 @@ fun MainScreen(hasPermission: Boolean, onRequestPermission: () -> Unit) {
     var message by remember { mutableStateOf<String?>(null) }
     var showPairing by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
+    var showLog by remember { mutableStateOf(false) }
 
     // Back from the About page returns to the main screen instead of leaving the app
     BackHandler(enabled = showAbout) { showAbout = false }
+    // Registered last, so it comes first: back from the event log returns to the About page
+    BackHandler(enabled = showLog) { showLog = false }
 
     // Messages belong to the pairing in progress; drop them when the paired camera changes (e.g. "Forget camera")
     LaunchedEffect(paired) { message = null }
@@ -119,8 +123,12 @@ fun MainScreen(hasPermission: Boolean, onRequestPermission: () -> Unit) {
         }
     }
 
+    if (showLog) {
+        EventLogScreen(onClose = { showLog = false })
+        return
+    }
     if (showAbout) {
-        AboutScreen(onClose = { showAbout = false })
+        AboutScreen(onClose = { showAbout = false }, onShowLog = { showLog = true })
         return
     }
 
@@ -227,7 +235,7 @@ private fun AboutButton(onClick: () -> Unit) {
 }
 
 @Composable
-private fun AboutScreen(onClose: () -> Unit) {
+private fun AboutScreen(onClose: () -> Unit, onShowLog: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -248,8 +256,36 @@ private fun AboutScreen(onClose: () -> Unit) {
             "Built on the Karoo extension library karoo-ext by Hammerhead (Apache License 2.0).",
             style = MaterialTheme.typography.bodySmall,
         )
+        OutlinedButton(onClick = onShowLog, modifier = Modifier.fillMaxWidth()) { Text("Event log") }
         Button(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("Close") }
         Spacer(Modifier.height(8.dp))
+    }
+}
+
+/** What happened with the camera recently (newest first), kept on the Karoo. Helps to find out why something failed. */
+@Composable
+private fun EventLogScreen(onClose: () -> Unit) {
+    val entries by EventLog.entries.collectAsState()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState())
+            .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = BACK_BUTTON_SPACE),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text("Event log", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            "The last ${entries.size} events with the camera, newest first. Saved on this Karoo" +
+                (EventLog.path?.let { " as $it" } ?: "") + ".",
+            style = MaterialTheme.typography.bodySmall,
+        )
+        if (entries.isEmpty()) Text("Nothing yet.")
+        entries.asReversed().take(150).forEach { line ->
+            Text(line, style = MaterialTheme.typography.bodySmall)
+        }
+        OutlinedButton(onClick = { EventLog.clear() }, modifier = Modifier.fillMaxWidth()) { Text("Clear the log") }
+        Button(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("Close") }
     }
 }
 

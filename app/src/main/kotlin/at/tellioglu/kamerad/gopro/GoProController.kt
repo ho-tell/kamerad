@@ -128,6 +128,9 @@ object GoProController {
     @Volatile
     private var sessionReady = false
 
+    private var lastLoggedBattery: Int? = null
+    private var lastReportedRecording: Boolean? = null
+
     private val _cameraModel = MutableStateFlow<String?>(null)
     val cameraModel: StateFlow<String?> = _cameraModel.asStateFlow()
 
@@ -222,7 +225,7 @@ object GoProController {
     private fun switchOff(announce: Boolean) = runAction("Switching off", wake = false) {
         // The camera rejects "sleep" while it is recording: stop the recording first and let it finish saving
         if ((_state.value as? CameraState.Connected)?.recording == true) {
-            Log.i(TAG, "Stopping the recording before switching off")
+            event("Stopping the recording before switching off")
             setRecording(false)
             withTimeoutOrNull(8.seconds) { state.first { it is CameraState.Connected && !it.recording && !it.busy } }
         }
@@ -260,7 +263,8 @@ object GoProController {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.w(TAG, "$name failed", e)
+                Log.w(TAG, "$name failed", e) // with the stack trace for logcat
+                EventLog.add("$name failed: ${e.message}")
                 _notices.emit(Notice("Camera error", e.message, isError = true))
             } finally {
                 release()
@@ -273,21 +277,21 @@ object GoProController {
     private suspend fun sleepWithRetry() {
         sleepRequestedAt = SystemClock.elapsedRealtime()
         repeat(6) { attempt ->
-            Log.i(TAG, "Sleep")
+            event("Sleep")
             try {
                 sendCommand(GoProCommands.SLEEP_COMMAND, GoProCommands.SLEEP)
                 return
             } catch (e: IllegalStateException) {
                 // "command rejected": camera busy
                 if (attempt == 5) throw e
-                Log.i(TAG, "Camera not ready to sleep yet: ${e.message}")
+                event("Camera not ready to sleep yet: ${e.message}")
                 delay(1.seconds)
             }
         }
     }
 
     private suspend fun setRecording(on: Boolean) {
-        Log.i(TAG, "Shutter ${if (on) "on" else "off"}")
+        event("Shutter ${if (on) "on" else "off"}")
         sendCommand(GoProCommands.shutter(on), GoProCommands.SET_SHUTTER)
         // Optimistic update; the camera's status push confirms it shortly after
         _state.update { current ->
@@ -357,12 +361,12 @@ object GoProController {
                 runSession(ble, direct, linkTimeout = if (direct) DIRECT_CONNECT_TIMEOUT else BACKGROUND_CONNECT_WINDOW)
                 cameraWasReady = true
             } catch (e: CameraNotAnsweringException) {
-                Log.i(TAG, "No answer from the camera (${if (direct) "direct" else "background"} attempt), trying again")
+                event("No answer from the camera (${if (direct) "direct" else "background"} attempt), trying again")
                 continue
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.w(TAG, "Camera session ended: ${e.message}")
+                event("Camera session ended: ${e.message}")
             } finally {
                 currentBle = null
                 ble.close()
@@ -378,15 +382,21 @@ object GoProController {
         }
     }
 
+    /** Logs to logcat and to the event history that can be read later (see [EventLog]). */
+    private fun event(message: String) {
+        Log.i(TAG, message)
+        EventLog.add(message)
+    }
+
     /** A working connection ended; if the camera was not switched off by us and its battery was low, it is probably empty. */
     private fun noteConnectionLost() {
         val percent = lastBattery
         val switchedOffByUs = SystemClock.elapsedRealtime() - sleepRequestedAt < 15_000 || switchedOff.value
         if (!switchedOffByUs && percent != null && percent <= EMPTY_BATTERY_THRESHOLD) {
-            Log.i(TAG, "Camera vanished at $percent% battery: probably empty")
+            event("Camera vanished at $percent% battery: probably empty")
             setProbablyEmpty(ProbablyEmpty(percent, System.currentTimeMillis()))
         } else {
-            Log.i(TAG, "Connection to the camera lost (last battery level: ${percent ?: "unknown"}%, switched off by us: $switchedOffByUs)")
+            event("Connection to the camera lost (last battery level: ${percent ?: "unknown"}%, switched off by us: $switchedOffByUs)")
         }
     }
 
@@ -421,16 +431,16 @@ object GoProController {
             }
         }
 
-        Log.i(TAG, "Connecting to camera (${if (direct) "direct" else "background"})")
+        event("Connecting to camera (${if (direct) "direct" else "background"})")
         val started = SystemClock.elapsedRealtime()
         fun elapsed() = "${(SystemClock.elapsedRealtime() - started) / 1000.0} s"
         val answered = ble.connect(linkTimeout, onLinkUp = {
             // The camera has answered; it may take a few more seconds until it is ready
             _state.value = CameraState.Starting
-            Log.i(TAG, "Camera answered (link up) after ${elapsed()}")
+            event("Camera answered (link up) after ${elapsed()}")
         })
         if (!answered) throw CameraNotAnsweringException()
-        Log.i(TAG, "Camera services discovered after ${elapsed()}")
+        event("Camera services discovered after ${elapsed()}")
         ble.enableNotifications(GoProUuids.COMMAND_RESPONSE)
         ble.enableNotifications(GoProUuids.SETTING_RESPONSE)
         ble.enableNotifications(GoProUuids.QUERY_RESPONSE)
@@ -439,8 +449,10 @@ object GoProController {
         awaitCameraReady()
         _state.value = CameraState.Connected()
         sessionReady = true
+        lastLoggedBattery = null
+        lastReportedRecording = null
         setProbablyEmpty(null)
-        Log.i(TAG, "Camera ready after ${elapsed()}")
+        event("Camera ready after ${elapsed()}")
         ble.write(
             GoProUuids.QUERY,
             GoProCommands.registerStatusUpdates(
@@ -459,7 +471,7 @@ object GoProController {
         }
 
         ble.disconnected.await()
-        Log.i(TAG, "Camera disconnected")
+        event("Camera disconnected")
         coroutineContext.cancelChildren()
     }
 
@@ -475,7 +487,7 @@ object GoProController {
             attempts++
             try {
                 val model = parseModelName(sendCommand(GoProCommands.GET_HARDWARE_INFO_COMMAND, GoProCommands.GET_HARDWARE_INFO).payload)
-                Log.i(TAG, "Camera model: $model (accepted commands after $attempts attempt(s))")
+                event("Camera model: $model (accepted commands after $attempts attempt(s))")
                 if (model != null && model != _cameraModel.value) {
                     prefs.edit().putString(KEY_MODEL, model).apply()
                     _cameraModel.value = model
@@ -483,14 +495,14 @@ object GoProController {
                 return
             } catch (e: TimeoutCancellationException) {
                 // No answer within the command timeout: try again like any other failure
-                Log.w(TAG, "Camera didn't answer (attempt $attempts)")
+                event("Camera didn't answer (attempt $attempts)")
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.i(TAG, "Camera not ready yet (attempt $attempts): ${e.message}")
+                event("Camera not ready yet (attempt $attempts): ${e.message}")
             }
             if (SystemClock.elapsedRealtime() - started > READY_TIMEOUT.inWholeMilliseconds) {
-                Log.w(TAG, "Camera never accepted the model request; carrying on")
+                event("Camera never accepted the model request; carrying on")
                 return
             }
             delay(500)
@@ -505,7 +517,23 @@ object GoProController {
         values.filterKeys { it != GoProStatus.VIDEO_DURATION }.takeIf { it.isNotEmpty() }?.let { logged ->
             Log.d(TAG, "Status: " + logged.entries.joinToString { (id, value) -> "$id=${value.toUnsignedInt()}" })
         }
-        values[GoProStatus.BATTERY_PERCENT]?.let { lastBattery = it.toUnsignedInt().toInt() }
+        values[GoProStatus.BATTERY_PERCENT]?.let {
+            val percent = it.toUnsignedInt().toInt()
+            lastBattery = percent
+            // Every 10 %, and every single step when it gets low: the trail before a battery runs out
+            val logged = lastLoggedBattery
+            if (logged == null || percent != logged && (percent <= 20 || kotlin.math.abs(percent - logged) >= 10)) {
+                lastLoggedBattery = percent
+                event("Camera battery: $percent%")
+            }
+        }
+        values[GoProStatus.ENCODING]?.let {
+            val recording = it.toUnsignedInt() != 0L
+            if (recording != lastReportedRecording) {
+                lastReportedRecording = recording
+                event("Camera reports: ${if (recording) "recording" else "not recording"}")
+            }
+        }
         _state.update { current ->
             if (current !is CameraState.Connected) return@update current
             var next: CameraState.Connected = current

@@ -58,6 +58,8 @@ data class TileModel(
     val background: Color,
     val icon: TileIcon? = null,
     val subtitleBattery: Int? = null,
+    /** Shrinks the title (below the size that fits the tile), e.g. for a longer text. */
+    val titleScale: Float = 1f,
 ) {
     companion object {
         /** Camera connected and ready; a GoPro-like blue that keeps white text readable. */
@@ -77,7 +79,13 @@ data class TileModel(
                 val empty = GoProController.probablyEmpty.value
                 if (empty != null) {
                     // Gone while the battery was low: it has probably run out
-                    TileModel("Empty?", "Battery was ${empty.percent}%", UNAVAILABLE, icon = TileIcon.Battery(empty.percent))
+                    TileModel(
+                        "Empty?",
+                        "Battery was ${empty.percent}%",
+                        UNAVAILABLE,
+                        icon = TileIcon.Battery(empty.percent),
+                        titleScale = 0.7f,
+                    )
                 } else {
                     TileModel("Waiting…", "for camera", UNAVAILABLE)
                 }
@@ -191,7 +199,13 @@ private fun ButtonTile(model: TileModel, titleSize: Float, titleWidthEm: Float, 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 // titleSize fits titleWidthEm; shrink longer texts such as "Waiting…" to fit as well
                 // (bold characters are about 0.6 em wide; icons count as part of titleWidthEm)
-                val fontSize = titleSize * minOf(1f, titleWidthEm / (model.title.length * 0.6f))
+                // The icon in front of the title takes room too (in multiples of the font size)
+                val iconEm = when (model.icon) {
+                    is TileIcon.Switch -> 1.65f
+                    is TileIcon.Battery -> 1.5f
+                    null -> 0f
+                }
+                val fontSize = titleSize * minOf(1f, titleWidthEm / (model.title.length * 0.6f + iconEm)) * model.titleScale
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     model.icon?.let { icon ->
                         // The text box has more room above the digits than below, so centring the boxes
