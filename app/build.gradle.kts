@@ -12,8 +12,8 @@ android {
         applicationId = "at.tellioglu.kamerad"
         minSdk = 23
         targetSdk = 34
-        versionCode = 24
-        versionName = "1.2.19"
+        versionCode = 26
+        versionName = "1.2.21"
     }
 
     // Release key lives outside the repo; configure kamerad.* in ~/.gradle/gradle.properties

@@ -3,9 +3,9 @@
   "packageName": "at.tellioglu.kamerad",
   "iconUrl": "https://tellioglu.at/kamerad/kamerad.png",
   "latestApkUrl": "https://tellioglu.at/kamerad/kamerad.apk",
-  "latestVersion": "1.2.19",
-  "latestVersionCode": 24,
+  "latestVersion": "1.2.21",
+  "latestVersionCode": 26,
   "developer": "Horst Tellioglu",
   "description": "Control your action camera (e.g. GoPro Hero) from your Karoo.\n\nGoPro and HERO are trademarks of GoPro, Inc. Kamerad is not affiliated with or endorsed by GoPro or Hammerhead.",
-  "releaseNotes": "Kamerad now also says the camera is probably empty when it stays unreachable after a low battery level (10% or less), even if the app was restarted in between. The event log no longer fills up with repeated connection attempts."
+  "releaseNotes": "The event log now also records when the camera is paired or forgotten, to help trace an unexpected unpairing."
 }

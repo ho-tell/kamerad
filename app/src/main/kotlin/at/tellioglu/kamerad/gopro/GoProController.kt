@@ -128,6 +128,7 @@ object GoProController {
 
     @Volatile
     private var sessionReady = false
+    private var connectLogged = false
 
     private var lastLoggedBattery: Int? = null
     private var lastReportedRecording: Boolean? = null
@@ -177,6 +178,12 @@ object GoProController {
     fun release() = users.update { maxOf(0, it - 1) }
 
     fun setPairedCamera(camera: PairedCamera?) {
+        // Kept in the history so an unexpected unpairing can be traced to what triggered it
+        if (camera == null) {
+            event("Camera forgotten, called from: " + Throwable().stackTrace.drop(1).take(4).joinToString(" < ") { "${it.className.substringAfterLast('.')}.${it.methodName}" })
+        } else {
+            event("Paired with ${camera.name}")
+        }
         prefs.edit().apply {
             if (camera == null) {
                 remove(KEY_ADDRESS)
@@ -368,6 +375,9 @@ object GoProController {
                 if (attempt == 1) event("No answer from the camera, trying again until it answers")
                 if (attempt >= 3) noteUnreachable()
                 continue
+            } catch (e: TimeoutCancellationException) {
+                // A step of the setup got no answer (e.g. while the camera shows a notice): a failed attempt, not a cancellation
+                event("Camera did not answer during setup (${e.message}), trying again")
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -448,7 +458,11 @@ object GoProController {
             }
         }
 
-        event("Connecting to camera (${if (direct) "direct" else "background"})")
+        // Only logged once per outage: the attempts repeat every few seconds and would fill the history
+        if (!connectLogged) {
+            connectLogged = true
+            event("Connecting to camera")
+        }
         val started = SystemClock.elapsedRealtime()
         fun elapsed() = "${(SystemClock.elapsedRealtime() - started) / 1000.0} s"
         val answered = ble.connect(linkTimeout, onLinkUp = {
@@ -466,6 +480,7 @@ object GoProController {
         awaitCameraReady()
         _state.value = CameraState.Connected()
         sessionReady = true
+        connectLogged = false
         lastLoggedBattery = null
         lastReportedRecording = null
         setProbablyEmpty(null)
