@@ -94,6 +94,8 @@ object GoProController {
     private const val KEY_EMPTY_PERCENT = "empty_percent"
     private const val KEY_EMPTY_AT = "empty_at"
     private const val KEY_LAST_BATTERY = "last_battery"
+    private const val KEY_IDLE_MINUTES = "idle_minutes"
+    private const val DEFAULT_IDLE_MINUTES = 5
 
     /** A camera that vanishes while its battery was at or below this level has probably run out of battery. */
     private const val EMPTY_BATTERY_THRESHOLD = 10
@@ -149,6 +151,17 @@ object GoProController {
     /** Switched off from Kamerad: don't connect until switched on again. */
     private val switchedOff = MutableStateFlow(false)
 
+    /** Minutes without recording after which the camera is switched off; 0 = never. */
+    private val _idleMinutes = MutableStateFlow(DEFAULT_IDLE_MINUTES)
+    val idleMinutes: StateFlow<Int> = _idleMinutes.asStateFlow()
+
+    /** Counts what the user did with the camera, so the idle timer starts over. */
+    private val activity = MutableStateFlow(0)
+
+    /** The camera recorded since it was last switched on: only then does the idle timer run. */
+    @Volatile
+    private var recordedSinceOn = false
+
     private val users = MutableStateFlow(0)
     private val commandResponses = MutableSharedFlow<TlvResponse>(extraBufferCapacity = 8)
     private val commandMutex = Mutex()
@@ -166,11 +179,45 @@ object GoProController {
         }
         switchedOff.value = prefs.getBoolean(KEY_SWITCHED_OFF, false)
         _cameraModel.value = prefs.getString(KEY_MODEL, null)
+        _idleMinutes.value = prefs.getInt(KEY_IDLE_MINUTES, DEFAULT_IDLE_MINUTES)
         if (prefs.contains(KEY_LAST_BATTERY)) lastBattery = prefs.getInt(KEY_LAST_BATTERY, 0)
         if (prefs.contains(KEY_EMPTY_PERCENT)) {
             _probablyEmpty.value = ProbablyEmpty(prefs.getInt(KEY_EMPTY_PERCENT, 0), prefs.getLong(KEY_EMPTY_AT, 0))
         }
         scope.launch { manageConnection() }
+        scope.launch { watchIdle() }
+    }
+
+    fun setIdleMinutes(minutes: Int) {
+        prefs.edit().putInt(KEY_IDLE_MINUTES, minutes).apply()
+        _idleMinutes.value = minutes
+    }
+
+    private enum class Activity { NOT_CONNECTED, RECORDING, BUSY, IDLE }
+
+    /**
+     * Switches the camera off when it has not recorded for [idleMinutes] while connected, so it is not left on
+     * (and draining) after a recording. Waking it again is what pressing the shutter already does.
+     */
+    private suspend fun watchIdle() {
+        val camera = _state
+            .map { s ->
+                when {
+                    s !is CameraState.Connected -> Activity.NOT_CONNECTED
+                    s.recording -> Activity.RECORDING
+                    s.busy -> Activity.BUSY
+                    else -> Activity.IDLE
+                }
+            }
+            .distinctUntilChanged()
+        combine(camera, _idleMinutes, activity) { c, minutes, _ -> c to minutes }.collectLatest { (c, minutes) ->
+            if (c == Activity.RECORDING) recordedSinceOn = true
+            if (c == Activity.IDLE && recordedSinceOn && minutes > 0) {
+                delay(minutes.minutes)
+                event("Not recording for $minutes min: switching the camera off")
+                switchOff(announce = true, detail = "Not recording for $minutes min")
+            }
+        }
     }
 
     fun acquire() = users.update { it + 1 }
@@ -205,6 +252,7 @@ object GoProController {
     }
 
     private fun setSwitchedOff(off: Boolean) {
+        if (off) recordedSinceOn = false
         prefs.edit().putBoolean(KEY_SWITCHED_OFF, off).apply()
         switchedOff.value = off
     }
@@ -232,7 +280,7 @@ object GoProController {
         if (announce) _notices.emit(Notice("Camera switched on", isError = false))
     }
 
-    private fun switchOff(announce: Boolean) = runAction("Switching off", wake = false) {
+    private fun switchOff(announce: Boolean, detail: String? = null) = runAction("Switching off", wake = false) {
         // The camera rejects "sleep" while it is recording: stop the recording first and let it finish saving
         if ((_state.value as? CameraState.Connected)?.recording == true) {
             event("Stopping the recording before switching off")
@@ -242,7 +290,7 @@ object GoProController {
         sleepWithRetry()
         // Stop connecting, which would wake the camera again
         setSwitchedOff(true)
-        if (announce) _notices.emit(Notice("Camera switched off", isError = false))
+        if (announce) _notices.emit(Notice("Camera switched off", detail, isError = false))
     }
 
     /**
@@ -251,6 +299,7 @@ object GoProController {
      */
     private fun runAction(name: String, wake: Boolean = true, action: suspend (CameraState.Connected) -> Unit) {
         if (!actionRunning.compareAndSet(false, true)) return
+        activity.update { it + 1 }
         scope.launch {
             acquire()
             try {
@@ -410,6 +459,8 @@ object GoProController {
         if (!switchedOffByUs && percent != null && percent <= EMPTY_BATTERY_THRESHOLD) {
             event("Camera vanished at $percent% battery: probably empty")
             setProbablyEmpty(ProbablyEmpty(percent, System.currentTimeMillis()))
+        } else if (!switchedOffByUs && percent != null) {
+            event("Camera shut down or lost at $percent% battery (more than $EMPTY_BATTERY_THRESHOLD% left): not a plain empty battery")
         } else {
             event("Connection to the camera lost (last battery level: ${percent ?: "unknown"}%, switched off by us: $switchedOffByUs)")
         }

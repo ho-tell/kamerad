@@ -184,6 +184,7 @@ fun MainScreen(hasPermission: Boolean, onRequestPermission: () -> Unit) {
             Spacer(Modifier.height(24.dp))
             HorizontalDivider()
             Spacer(Modifier.height(8.dp))
+            IdleOffButton()
             ForgetCameraButton()
         }
 
@@ -286,6 +287,19 @@ private fun EventLogScreen(onClose: () -> Unit) {
         }
         OutlinedButton(onClick = { EventLog.clear() }, modifier = Modifier.fillMaxWidth()) { Text("Clear the log") }
         Button(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("Close") }
+    }
+}
+
+/** Cycles how long the camera may sit idle after a recording before it is switched off. */
+@Composable
+private fun IdleOffButton() {
+    val minutes by GoProController.idleMinutes.collectAsState()
+    val options = listOf(2, 5, 10, 15, 0)
+    OutlinedButton(
+        onClick = { GoProController.setIdleMinutes(options[(options.indexOf(minutes) + 1) % options.size]) },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(if (minutes == 0) "Switch off when idle: never" else "Switch off after $minutes min without recording")
     }
 }
 
