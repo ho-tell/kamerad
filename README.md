@@ -92,6 +92,7 @@ Either way, Kamerad now appears under **Extensions** on the Karoo.
 
 - Kamerad only connects to the camera while a tile is on screen or the app is open, so the camera can go to sleep otherwise.
 - The GoPro talks to only one device at a time. If the GoPro Quik app on your phone is connected to it, Kamerad can't reach the camera and keeps saying "Waiting…". Close Quik while you ride, or turn off Quik's Bluetooth permission in your phone's settings.
+- To change or remove a Kamerad tile, use **Profiles → Data pages** on the Karoo. During a ride, tapping a Kamerad tile records or switches the camera, so the Karoo's own editing doesn't open there.
 - Tiles in half-width fields show less text (no battery level).
 - After you switch the camera off with Kamerad, it stays off until you switch it on again with Kamerad (or start a recording from the tile).
 

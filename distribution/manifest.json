@@ -3,9 +3,9 @@
   "packageName": "at.tellioglu.kamerad",
   "iconUrl": "https://tellioglu.at/kamerad/kamerad.png",
   "latestApkUrl": "https://tellioglu.at/kamerad/kamerad.apk",
-  "latestVersion": "1.2.23",
-  "latestVersionCode": 28,
+  "latestVersion": "1.2.24",
+  "latestVersionCode": 29,
   "developer": "Horst Tellioglu",
   "description": "Control your action camera (e.g. GoPro Hero) from your Karoo.\n\nGoPro and HERO are trademarks of GoPro, Inc. Kamerad is not affiliated with or endorsed by GoPro or Hammerhead.",
-  "releaseNotes": "The event log now records why the camera connection was lost and how strong the signal was, to help find the cause of dropouts. The About screen has a disclaimer, and the website explains that GoPro Quik on your phone can block the camera while Kamerad uses it."
+  "releaseNotes": "Kamerad tiles can now be changed in Profiles → Data pages: tapping them there no longer starts a recording."
 }

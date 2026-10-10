@@ -149,7 +149,8 @@ abstract class ButtonTileDataType(extension: String, typeId: String) : DataTypeI
         Log.d("Kamerad", "$typeId field $config -> ${titleSize}sp")
         // Keep the camera connected while the field is on screen (not in page-editing preview)
         if (!config.preview) GoProController.acquire()
-        val onClick = clickAction(context)
+        // In the page editor a tap selects the field for editing: the tile must not take it
+        val onClick = if (config.preview) null else clickAction(context)
         // Half-width fields (30 of 60 grid columns) or narrower
         val compact = config.gridSize.first <= 30
         val logoSize = if (compact) COMPACT_LOGO_SIZE_DP else LOGO_SIZE_DP
