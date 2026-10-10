@@ -103,6 +103,8 @@ object GoProController {
     private val KEEP_ALIVE_INTERVAL = 3.seconds
     private val READY_TIMEOUT = 20.seconds
     private val DIRECT_CONNECT_TIMEOUT = 8.seconds
+    private val RSSI_INTERVAL = 10.seconds
+    private val ADVERTISING_LISTEN = 10.seconds
     private val BACKGROUND_CONNECT_WINDOW = 30.seconds
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -406,6 +408,8 @@ object GoProController {
      */
     private suspend fun connectLoop(camera: PairedCamera) {
         var attempt = 0
+        // A session cancelled because the camera was no longer wanted didn't lose its connection
+        sessionReady = false
         while (true) {
             if (!hasBluetoothPermission()) {
                 _state.value = CameraState.NoPermission
@@ -423,6 +427,7 @@ object GoProController {
                 // Only the first miss is logged: hundreds of identical lines would push out what matters
                 if (attempt == 1) event("No answer from the camera, trying again until it answers")
                 if (attempt >= 3) noteUnreachable()
+                if (attempt == 3 || attempt % 20 == 0) checkAdvertising(camera, firstCheck = attempt == 3)
                 continue
             } catch (e: TimeoutCancellationException) {
                 // A step of the setup got no answer (e.g. while the camera shows a notice): a failed attempt, not a cancellation
@@ -444,6 +449,40 @@ object GoProController {
             _state.value = CameraState.Searching
             delay(5.seconds)
         }
+    }
+
+    private var lastAdvertisingHeard: Boolean? = null
+
+    /**
+     * During an outage: is the camera still advertising? Heard: it is in range but doesn't accept the
+     * connection; not heard: it is out of range or has stopped advertising. Logged when the answer changes.
+     */
+    private suspend fun checkAdvertising(camera: PairedCamera, firstCheck: Boolean) {
+        val rssi = try {
+            listenForCamera(appContext, camera.address, ADVERTISING_LISTEN)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            event("Could not listen for the camera: ${e.message}")
+            return
+        }
+        val heard = rssi != null
+        if (!firstCheck && heard == lastAdvertisingHeard) return
+        lastAdvertisingHeard = heard
+        event(
+            if (rssi != null) "Camera is advertising ($rssi dBm) but does not accept the connection"
+            else "Camera not heard advertising for ${ADVERTISING_LISTEN.inWholeSeconds} s: out of range or not advertising",
+        )
+    }
+
+    private fun describeDisconnect(status: Int?): String = when (status) {
+        null -> "closed by Kamerad"
+        8 -> "status 8: link timed out, weak signal or out of range"
+        19 -> "status 19: ended by the camera"
+        22 -> "status 22: ended by the Karoo"
+        62 -> "status 62: link could not be set up"
+        133 -> "status 133: Bluetooth error"
+        else -> "status $status"
     }
 
     /** Logs to logcat and to the event history that can be read later (see [EventLog]). */
@@ -553,8 +592,27 @@ object GoProController {
             }
         }
 
+        // The signal strength before a lost connection tells a weak link (distance, body in the way) from other causes
+        var lastRssi: Int? = null
+        var weakestRssi: Int? = null
+        launch {
+            while (true) {
+                delay(RSSI_INTERVAL)
+                try {
+                    val rssi = ble.readRssi()
+                    lastRssi = rssi
+                    weakestRssi = minOf(weakestRssi ?: rssi, rssi)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // only a diagnostic: never end the session because of it
+                }
+            }
+        }
+
         ble.disconnected.await()
-        event("Camera disconnected")
+        val signal = lastRssi?.let { ", signal before: $it dBm, weakest $weakestRssi dBm" } ?: ""
+        event("Camera disconnected (${describeDisconnect(ble.disconnectStatus)}$signal)")
         coroutineContext.cancelChildren()
     }
 

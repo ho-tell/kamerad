@@ -250,7 +250,11 @@ private fun AboutScreen(onClose: () -> Unit, onShowLog: () -> Unit) {
         Text("Control an action camera from your Karoo: start and stop recording, switch it on and off, and see its battery.")
         Text(
             "GoPro and HERO are trademarks of GoPro, Inc. Kamerad is not affiliated with or endorsed by GoPro or Hammerhead.",
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Text(
+            "Kamerad is free software and comes without any warranty. You use it at your own risk. To the extent permitted by law, the author is not liable for any damage to your camera, your Karoo or any other device, for lost or missing recordings, or for any other loss caused by using Kamerad.",
+            style = MaterialTheme.typography.bodySmall,
         )
         Text("© 2026 Horst Tellioglu. MIT License. Built with Claude.", style = MaterialTheme.typography.bodySmall)
         Text(

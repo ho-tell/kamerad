@@ -91,6 +91,7 @@ Either way, Kamerad now appears under **Extensions** on the Karoo.
 ## Good to know
 
 - Kamerad only connects to the camera while a tile is on screen or the app is open, so the camera can go to sleep otherwise.
+- The GoPro talks to only one device at a time. If the GoPro Quik app on your phone is connected to it, Kamerad can't reach the camera and keeps saying "Waiting…". Close Quik while you ride, or turn off Quik's Bluetooth permission in your phone's settings.
 - Tiles in half-width fields show less text (no battery level).
 - After you switch the camera off with Kamerad, it stays off until you switch it on again with Kamerad (or start a recording from the tile).
 
@@ -101,6 +102,8 @@ Build instructions and code layout: [docs/DEVELOPING.md](docs/DEVELOPING.md).
 ## License
 
 [MIT](LICENSE). Kamerad is built on Hammerhead's [karoo-ext](https://github.com/hammerheadnav/karoo-ext); see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
+Kamerad is free software and comes without any warranty. You use it at your own risk. To the extent permitted by law, the author is not liable for any damage to your camera, your Karoo or any other device, for lost or missing recordings, or for any other loss caused by using Kamerad.
 
 GoPro and HERO are trademarks of GoPro, Inc. Kamerad is not affiliated with or endorsed by GoPro or Hammerhead.
 

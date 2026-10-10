@@ -60,6 +60,30 @@ fun scanForCameras(context: Context): Flow<FoundCamera> = callbackFlow {
     awaitClose { scanner.stopScan(callback) }
 }
 
+/**
+ * Listens for [duration] whether the camera is advertising (i.e. could be connected to).
+ * @return its signal strength in dBm, or null if it wasn't heard
+ */
+@SuppressLint("MissingPermission")
+suspend fun listenForCamera(context: Context, address: String, duration: Duration): Int? = withTimeoutOrNull(duration) {
+    callbackFlow {
+        val scanner = context.bluetoothAdapter().bluetoothLeScanner ?: throw IOException("Bluetooth is off")
+        val callback = object : ScanCallback() {
+            override fun onScanResult(callbackType: Int, result: ScanResult) {
+                trySend(result.rssi)
+            }
+
+            override fun onScanFailed(errorCode: Int) {
+                close(IOException("Bluetooth scan failed ($errorCode)"))
+            }
+        }
+        val filter = ScanFilter.Builder().setDeviceAddress(address).build()
+        val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
+        scanner.startScan(listOf(filter), settings, callback)
+        awaitClose { scanner.stopScan(callback) }
+    }.first()
+}
+
 /** Bonds (pairs) with the camera; the camera must be in pairing mode. */
 @SuppressLint("MissingPermission")
 suspend fun bondWithCamera(context: Context, address: String) {
@@ -111,6 +135,14 @@ class GoProBle(private val context: Context, address: String, private val autoCo
     /** Completes when the connection is lost or closed. */
     val disconnected = CompletableDeferred<Unit>()
 
+    /** Android's status code for the lost connection (e.g. 8: link timed out, 19: ended by the camera), null if closed by us. */
+    @Volatile
+    var disconnectStatus: Int? = null
+        private set
+
+    @Volatile
+    private var rssi = 0
+
     private val _notifications = MutableSharedFlow<Pair<UUID, ByteArray>>(extraBufferCapacity = 64)
     val notifications: SharedFlow<Pair<UUID, ByteArray>> = _notifications.asSharedFlow()
 
@@ -119,6 +151,7 @@ class GoProBle(private val context: Context, address: String, private val autoCo
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> connected.complete(Unit)
                 BluetoothProfile.STATE_DISCONNECTED -> {
+                    if (!disconnected.isCompleted) disconnectStatus = status
                     val error = IOException("Disconnected (status $status)")
                     connected.completeExceptionally(error)
                     pending?.completeExceptionally(error)
@@ -128,6 +161,11 @@ class GoProBle(private val context: Context, address: String, private val autoCo
         }
 
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+            pending?.complete(status to null)
+        }
+
+        override fun onReadRemoteRssi(gatt: BluetoothGatt, rssi: Int, status: Int) {
+            this@GoProBle.rssi = rssi
             pending?.complete(status to null)
         }
 
@@ -199,6 +237,12 @@ class GoProBle(private val context: Context, address: String, private val autoCo
             @Suppress("DEPRECATION")
             gatt.writeDescriptor(descriptor)
         }
+    }
+
+    /** The signal strength of the connection in dBm (around -50: close, below -90: about to drop). */
+    suspend fun readRssi(): Int {
+        op("Read signal strength") { it.readRemoteRssi() }
+        return rssi
     }
 
     fun close() {
