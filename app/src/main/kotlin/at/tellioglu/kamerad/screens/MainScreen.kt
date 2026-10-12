@@ -65,9 +65,11 @@ fun MainScreen(hasPermission: Boolean, onRequestPermission: () -> Unit) {
     var showPairing by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
     var showLog by remember { mutableStateOf(false) }
+    var showHelp by remember { mutableStateOf(false) }
 
     // Back from the About page returns to the main screen instead of leaving the app
     BackHandler(enabled = showAbout) { showAbout = false }
+    BackHandler(enabled = showHelp) { showHelp = false }
     // Registered last, so it comes first: back from the event log returns to the About page
     BackHandler(enabled = showLog) { showLog = false }
 
@@ -131,6 +133,10 @@ fun MainScreen(hasPermission: Boolean, onRequestPermission: () -> Unit) {
         AboutScreen(onClose = { showAbout = false }, onShowLog = { showLog = true })
         return
     }
+    if (showHelp) {
+        HelpScreen(onClose = { showHelp = false })
+        return
+    }
 
     Column(
         modifier = Modifier
@@ -147,6 +153,7 @@ fun MainScreen(hasPermission: Boolean, onRequestPermission: () -> Unit) {
             Button(onClick = onRequestPermission, modifier = Modifier.fillMaxWidth()) {
                 Text("Grant permission")
             }
+            HelpButton { showHelp = true }
             AboutButton { showAbout = true }
             return@Column
         }
@@ -193,6 +200,7 @@ fun MainScreen(hasPermission: Boolean, onRequestPermission: () -> Unit) {
             OutlinedButton(onClick = { showPairing = true }, modifier = Modifier.fillMaxWidth()) {
                 Text("Pair a different camera")
             }
+            HelpButton { showHelp = true }
             AboutButton { showAbout = true }
             return@Column
         }
@@ -223,8 +231,67 @@ fun MainScreen(hasPermission: Boolean, onRequestPermission: () -> Unit) {
                 HorizontalDivider()
             }
         }
+        HelpButton { showHelp = true }
         AboutButton { showAbout = true }
         Spacer(Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun HelpButton(onClick: () -> Unit) {
+    TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Text("Help")
+    }
+}
+
+/** Answers to the common questions, so they can be looked up on the Karoo during a ride (same as "Good to know" on the website). */
+@Composable
+private fun HelpScreen(onClose: () -> Unit) {
+    val idleMinutes by GoProController.idleMinutes.collectAsState()
+    val idleOff = if (idleMinutes > 0) "after $idleMinutes minutes without recording" else "never (set on the main screen)"
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState())
+            .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = BACK_BUTTON_SPACE),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text("Help", style = MaterialTheme.typography.headlineMedium)
+        HelpItem(
+            "The tiles keep saying “Waiting…”",
+            "Waking a sleeping camera takes a few seconds: first “Waiting…”, then “Starting…”. " +
+                "If it stays at “Waiting…”, the GoPro Quik app on your phone may be connected to the camera: " +
+                "the GoPro talks to only one device at a time. Close Quik while you ride, or turn off Quik’s Bluetooth permission in your phone’s settings.",
+        )
+        HelpItem(
+            "How do I change or remove a Kamerad tile?",
+            "Use Profiles → Data pages on the Karoo. During a ride, tapping a Kamerad tile records or switches the camera, so the Karoo’s own editing doesn’t open there.",
+        )
+        HelpItem(
+            "Does the recording stop when I go to another page?",
+            "No. Kamerad keeps the camera awake only while a Kamerad tile is on screen. Two minutes after you switch to another page, it lets go, " +
+                "and the GoPro’s own Auto Power Off takes over. A running recording continues, and the tile shows it again when you come back.",
+        )
+        HelpItem(
+            "Why did the camera switch off?",
+            "While a tile is on screen, Kamerad switches the camera off $idleOff, to save its battery. You can change this on the main screen. " +
+                "It never stops a recording. Tap REC or the switch to wake the camera again.",
+        )
+        HelpItem(
+            "Which cameras work?",
+            "Tested with a GoPro HERO11 Black; HERO9 and newer should work. A HERO8 works too, but it can’t be switched on from the Karoo: use its own button.",
+        )
+        Button(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("Close") }
+        Spacer(Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun HelpItem(question: String, answer: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(question, style = MaterialTheme.typography.titleMedium)
+        Text(answer, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

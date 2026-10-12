@@ -3,9 +3,9 @@
   "packageName": "at.tellioglu.kamerad",
   "iconUrl": "https://tellioglu.at/kamerad/kamerad.png",
   "latestApkUrl": "https://tellioglu.at/kamerad/kamerad.apk",
-  "latestVersion": "1.2.24",
-  "latestVersionCode": 29,
+  "latestVersion": "1.2.25",
+  "latestVersionCode": 30,
   "developer": "Horst Tellioglu",
   "description": "Control your action camera (e.g. GoPro Hero) from your Karoo.\n\nGoPro and HERO are trademarks of GoPro, Inc. Kamerad is not affiliated with or endorsed by GoPro or Hammerhead.",
-  "releaseNotes": "Kamerad tiles can now be changed in Profiles → Data pages: tapping them there no longer starts a recording."
+  "releaseNotes": "New Help screen in the Kamerad app (Extensions → Kamerad → Open → Help) with answers to common questions, e.g. why the tiles keep saying “Waiting…” and how to change a Kamerad tile."
 }
