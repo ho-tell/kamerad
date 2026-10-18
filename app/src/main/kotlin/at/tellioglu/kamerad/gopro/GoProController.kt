@@ -419,10 +419,8 @@ object GoProController {
             _state.value = CameraState.Searching
             val direct = attempt++ % 2 == 0
             val ble = GoProBle(appContext, camera.address, autoConnect = !direct)
-            var cameraWasReady = false
             try {
                 runSession(ble, direct, linkTimeout = if (direct) DIRECT_CONNECT_TIMEOUT else BACKGROUND_CONNECT_WINDOW)
-                cameraWasReady = true
             } catch (e: CameraNotAnsweringException) {
                 // Only the first miss is logged: hundreds of identical lines would push out what matters
                 if (attempt == 1) event("No answer from the camera, trying again until it answers")
@@ -443,9 +441,10 @@ object GoProController {
             if (sessionReady) {
                 sessionReady = false
                 noteConnectionLost()
+                // After a lost connection start over with a direct attempt, also when the session ended with an
+                // error (e.g. a failed write): otherwise the first miss isn't logged and the advertising check comes late
+                attempt = 0
             }
-            // After a lost connection start over with a direct attempt
-            if (cameraWasReady) attempt = 0
             _state.value = CameraState.Searching
             delay(5.seconds)
         }
