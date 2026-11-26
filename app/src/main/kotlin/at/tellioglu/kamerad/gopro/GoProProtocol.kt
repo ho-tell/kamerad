@@ -26,6 +26,7 @@ object GoProCommands {
     const val SET_SHUTTER = 0x01
     const val SLEEP = 0x05
     const val GET_HARDWARE_INFO = 0x3C
+    const val LOAD_PRESET = 0x40
 
     const val QUERY_GET_STATUS = 0x13
     const val QUERY_REGISTER_STATUS = 0x53
@@ -34,6 +35,17 @@ object GoProCommands {
     fun shutter(on: Boolean): ByteArray = byteArrayOf(0x03, SET_SHUTTER.toByte(), 0x01, if (on) 0x01 else 0x00)
 
     val GET_HARDWARE_INFO_COMMAND: ByteArray = byteArrayOf(0x01, GET_HARDWARE_INFO.toByte())
+
+    /** Makes [presetId] (as reported in status [GoProStatus.ACTIVE_PRESET]) the active preset, e.g. a photo preset. */
+    fun loadPreset(presetId: Int): ByteArray = byteArrayOf(
+        0x06,
+        LOAD_PRESET.toByte(),
+        0x04,
+        (presetId ushr 24).toByte(),
+        (presetId ushr 16).toByte(),
+        (presetId ushr 8).toByte(),
+        presetId.toByte(),
+    )
 
     /** Puts the camera to sleep (off); it keeps advertising and wakes up when a client connects. */
     val SLEEP_COMMAND: ByteArray = byteArrayOf(0x01, SLEEP.toByte())
@@ -51,6 +63,7 @@ object GoProStatus {
     const val ENCODING = 10
     const val VIDEO_DURATION = 13
     const val BATTERY_PERCENT = 70
+    const val ACTIVE_PRESET = 97
 }
 
 /** A complete response message: `id`, `status` and the remaining payload. */

@@ -95,6 +95,7 @@ object GoProController {
     private const val KEY_EMPTY_AT = "empty_at"
     private const val KEY_LAST_BATTERY = "last_battery"
     private const val KEY_IDLE_MINUTES = "idle_minutes"
+    private const val KEY_PRESET = "preset"
     private const val DEFAULT_IDLE_MINUTES = 5
 
     /** A camera that vanishes while its battery was at or below this level has probably run out of battery. */
@@ -153,6 +154,13 @@ object GoProController {
     /** Switched off from Kamerad: don't connect until switched on again. */
     private val switchedOff = MutableStateFlow(false)
 
+    /**
+     * The camera was switched on again by Kamerad after it switched it off: it wakes up in its default preset
+     * (usually video), so the preset it had before is loaded again (see [restorePreset]).
+     */
+    @Volatile
+    private var wokenByUs = false
+
     /** Minutes without recording after which the camera is switched off; 0 = never. */
     private val _idleMinutes = MutableStateFlow(DEFAULT_IDLE_MINUTES)
     val idleMinutes: StateFlow<Int> = _idleMinutes.asStateFlow()
@@ -188,6 +196,14 @@ object GoProController {
         }
         scope.launch { manageConnection() }
         scope.launch { watchIdle() }
+        scope.launch { watchBluetooth() }
+    }
+
+    /** Logs when the Karoo's Bluetooth switches on or off, as that also ends the connection to the camera. */
+    private suspend fun watchBluetooth() {
+        bluetoothStateChanges(appContext).collect { state ->
+            event("Karoo Bluetooth ${bluetoothStateName(state)}")
+        }
     }
 
     fun setIdleMinutes(minutes: Int) {
@@ -245,6 +261,7 @@ object GoProController {
             remove(KEY_EMPTY_PERCENT)
             remove(KEY_EMPTY_AT)
             remove(KEY_LAST_BATTERY)
+            remove(KEY_PRESET)
         }.apply()
         _cameraModel.value = null
         _probablyEmpty.value = null
@@ -255,6 +272,7 @@ object GoProController {
 
     private fun setSwitchedOff(off: Boolean) {
         if (off) recordedSinceOn = false
+        if (!off && switchedOff.value) wokenByUs = true
         prefs.edit().putBoolean(KEY_SWITCHED_OFF, off).apply()
         switchedOff.value = off
     }
@@ -462,7 +480,7 @@ object GoProController {
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            event("Could not listen for the camera: ${e.message}")
+            event("Could not listen for the camera: ${e.message} (Karoo Bluetooth: ${currentBluetoothState(appContext)})")
             return
         }
         val heard = rssi != null
@@ -566,7 +584,10 @@ object GoProController {
         ble.enableNotifications(GoProUuids.QUERY_RESPONSE)
         currentBle = ble
         // Stay in "Starting" until the camera accepts commands: right after waking up it still rejects them
-        awaitCameraReady()
+        val justWokeUp = awaitCameraReady()
+        // Before "Connected", so a REC tap that woke the camera captures in the restored preset
+        if (justWokeUp || wokenByUs) restorePreset()
+        wokenByUs = false
         _state.value = CameraState.Connected()
         sessionReady = true
         connectLogged = false
@@ -581,6 +602,7 @@ object GoProController {
                 GoProStatus.ENCODING,
                 GoProStatus.VIDEO_DURATION,
                 GoProStatus.BATTERY_PERCENT,
+                GoProStatus.ACTIVE_PRESET,
             ),
         )
 
@@ -611,16 +633,42 @@ object GoProController {
 
         ble.disconnected.await()
         val signal = lastRssi?.let { ", signal before: $it dBm, weakest $weakestRssi dBm" } ?: ""
-        event("Camera disconnected (${describeDisconnect(ble.disconnectStatus)}$signal)")
+        event("Camera disconnected (${describeDisconnect(ble.disconnectStatus)}$signal, Karoo Bluetooth: ${currentBluetoothState(appContext)})")
         coroutineContext.cancelChildren()
     }
+
+    /**
+     * Loads the preset the camera had when Kamerad last saw it (e.g. photo), as a camera that wakes up starts in
+     * its default preset (usually video). Only after a wake: a camera that was already on may have been switched
+     * to another preset by hand on purpose.
+     */
+    private suspend fun restorePreset() {
+        if (!prefs.contains(KEY_PRESET)) return
+        val preset = prefs.getInt(KEY_PRESET, 0)
+        repeat(3) { attempt ->
+            try {
+                sendCommand(GoProCommands.loadPreset(preset), GoProCommands.LOAD_PRESET)
+                event("Loaded the camera's last preset again (${presetName(preset)})")
+                return
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // e.g. the preset was deleted on the camera: it stays in its default preset
+                if (attempt == 2) event("Could not load the camera's last preset (${presetName(preset)}): ${e.message}")
+                delay(500)
+            }
+        }
+    }
+
+    private fun presetName(id: Int) = "id 0x${Integer.toHexString(id)}"
 
     /**
      * Waits until the camera accepts commands, by asking it for its model (e.g. "HERO8 Black", remembered).
      * A camera that has just woken up answers "not ready" for a moment; gives up after [READY_TIMEOUT]
      * and carries on, so a camera that never answers this command isn't blocked.
+     * @return the camera had just woken up (it didn't accept the first request)
      */
-    private suspend fun awaitCameraReady() {
+    private suspend fun awaitCameraReady(): Boolean {
         val started = SystemClock.elapsedRealtime()
         var attempts = 0
         while (true) {
@@ -632,7 +680,7 @@ object GoProController {
                     prefs.edit().putString(KEY_MODEL, model).apply()
                     _cameraModel.value = model
                 }
-                return
+                return attempts > 1
             } catch (e: TimeoutCancellationException) {
                 // No answer within the command timeout: try again like any other failure
                 event("Camera didn't answer (attempt $attempts)")
@@ -643,7 +691,7 @@ object GoProController {
             }
             if (SystemClock.elapsedRealtime() - started > READY_TIMEOUT.inWholeMilliseconds) {
                 event("Camera never accepted the model request; carrying on")
-                return
+                return true
             }
             delay(500)
         }
@@ -666,6 +714,13 @@ object GoProController {
             if (logged == null || percent != logged && (percent <= 20 || kotlin.math.abs(percent - logged) >= 10)) {
                 lastLoggedBattery = percent
                 event("Camera battery: $percent%")
+            }
+        }
+        values[GoProStatus.ACTIVE_PRESET]?.let {
+            val preset = it.toUnsignedInt().toInt()
+            if (!prefs.contains(KEY_PRESET) || prefs.getInt(KEY_PRESET, 0) != preset) {
+                prefs.edit().putInt(KEY_PRESET, preset).apply()
+                event("Camera preset: ${presetName(preset)}")
             }
         }
         values[GoProStatus.ENCODING]?.let {

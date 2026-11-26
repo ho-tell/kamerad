@@ -279,6 +279,11 @@ private fun HelpScreen(onClose: () -> Unit) {
                 "It never stops a recording. Tap REC or the switch to wake the camera again.",
         )
         HelpItem(
+            "Does the camera keep its mode, e.g. photo?",
+            "Yes. When Kamerad wakes the camera, it switches it back to the mode it was in before, for example photo or time-lapse. " +
+                "A GoPro switched on with its own button starts in its Default Preset, which you set on the camera.",
+        )
+        HelpItem(
             "Which cameras work?",
             "Tested with a GoPro HERO11 Black; HERO9 and newer should work. A HERO8 works too, but it can’t be switched on from the Karoo: use its own button.",
         )

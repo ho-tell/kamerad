@@ -1,6 +1,7 @@
 package at.tellioglu.kamerad.gopro
 
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
@@ -39,6 +40,40 @@ data class FoundCamera(val address: String, val name: String)
 
 private fun Context.bluetoothAdapter() =
     getSystemService(BluetoothManager::class.java)?.adapter ?: throw IOException("Bluetooth not available")
+
+/** The Karoo's Bluetooth state as text, e.g. "on" or "turning off". */
+fun bluetoothStateName(state: Int): String = when (state) {
+    BluetoothAdapter.STATE_OFF -> "off"
+    BluetoothAdapter.STATE_TURNING_ON -> "turning on"
+    BluetoothAdapter.STATE_ON -> "on"
+    BluetoothAdapter.STATE_TURNING_OFF -> "turning off"
+    else -> "state $state"
+}
+
+/** The Karoo's current Bluetooth state, see [bluetoothStateName]. */
+@SuppressLint("MissingPermission")
+fun currentBluetoothState(context: Context): String =
+    try {
+        bluetoothStateName(context.bluetoothAdapter().state)
+    } catch (e: Exception) {
+        e.message ?: "unknown"
+    }
+
+/** Emits each change of the Karoo's Bluetooth state (a [BluetoothAdapter] STATE_ value) until the flow is cancelled. */
+fun bluetoothStateChanges(context: Context): Flow<Int> = callbackFlow {
+    val receiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            trySend(intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR))
+        }
+    }
+    ContextCompat.registerReceiver(
+        context,
+        receiver,
+        IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED),
+        ContextCompat.RECEIVER_EXPORTED,
+    )
+    awaitClose { context.unregisterReceiver(receiver) }
+}
 
 /** Scans for advertising GoPro cameras until the flow is cancelled. */
 @SuppressLint("MissingPermission")
