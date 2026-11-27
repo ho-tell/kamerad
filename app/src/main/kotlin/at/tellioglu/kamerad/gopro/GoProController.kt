@@ -105,6 +105,7 @@ object GoProController {
     private val READY_TIMEOUT = 20.seconds
     private val DIRECT_CONNECT_TIMEOUT = 8.seconds
     private val RSSI_INTERVAL = 10.seconds
+    private val PRESET_POLL_INTERVAL = 5.seconds
     private val ADVERTISING_LISTEN = 10.seconds
     private val BACKGROUND_CONNECT_WINDOW = 30.seconds
 
@@ -307,6 +308,9 @@ object GoProController {
             setRecording(false)
             withTimeoutOrNull(8.seconds) { state.first { it is CameraState.Connected && !it.recording && !it.busy } }
         }
+        // A HERO8 doesn't report a preset changed on the camera: ask for it, so the wake brings back the right one
+        askForPreset()
+        delay(500)
         sleepWithRetry()
         // Stop connecting, which would wake the camera again
         setSwitchedOff(true)
@@ -349,6 +353,17 @@ object GoProController {
                 release()
                 actionRunning.set(false)
             }
+        }
+    }
+
+    /** Asks the camera for its active preset; the answer is remembered in [onQueryResponse]. */
+    private suspend fun askForPreset() {
+        try {
+            currentBle?.write(GoProUuids.QUERY, GoProCommands.getStatus(GoProStatus.ACTIVE_PRESET))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // the preset is only remembered for the next wake: never fail because of it
         }
     }
 
@@ -610,6 +625,14 @@ object GoProController {
             while (true) {
                 delay(KEEP_ALIVE_INTERVAL)
                 ble.write(GoProUuids.SETTING, GoProCommands.KEEP_ALIVE)
+            }
+        }
+
+        // A HERO8 reports its preset only when asked (HERO11: also pushed when it changes)
+        launch {
+            while (true) {
+                delay(PRESET_POLL_INTERVAL)
+                askForPreset()
             }
         }
 

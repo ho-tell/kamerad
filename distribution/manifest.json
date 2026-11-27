@@ -3,9 +3,9 @@
   "packageName": "at.tellioglu.kamerad",
   "iconUrl": "https://tellioglu.at/kamerad/kamerad.png",
   "latestApkUrl": "https://tellioglu.at/kamerad/kamerad.apk",
-  "latestVersion": "1.2.27",
-  "latestVersionCode": 32,
+  "latestVersion": "1.2.28",
+  "latestVersionCode": 33,
   "developer": "Horst Tellioglu",
   "description": "Control your action camera (e.g. GoPro Hero) from your Karoo.\n\nGoPro and HERO are trademarks of GoPro, Inc. Kamerad is not affiliated with or endorsed by GoPro or Hammerhead.",
-  "releaseNotes": "The camera keeps its mode: when Kamerad switches the camera on, it goes back to photo, time-lapse or whatever mode it was in before, instead of video. The event log also notes when the Karoo's Bluetooth turns on or off."
+  "releaseNotes": "The camera keeps its mode now also on a HERO8: after you switch it on again and reconnect, it goes back to photo, time-lapse or whatever mode it was in before."
 }

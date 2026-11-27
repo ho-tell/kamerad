@@ -53,6 +53,11 @@ object GoProCommands {
     /** Setting 91 (LED) = 66 is the documented BLE keep-alive; must be sent every few seconds. */
     val KEEP_ALIVE: ByteArray = byteArrayOf(0x03, 0x5B, 0x01, 0x42)
 
+    /** Asks for the current value of [statusIds] once; the answer arrives on the query response characteristic. */
+    fun getStatus(vararg statusIds: Int): ByteArray =
+        byteArrayOf((statusIds.size + 1).toByte(), QUERY_GET_STATUS.toByte()) +
+            statusIds.map { it.toByte() }.toByteArray()
+
     fun registerStatusUpdates(vararg statusIds: Int): ByteArray =
         byteArrayOf((statusIds.size + 1).toByte(), QUERY_REGISTER_STATUS.toByte()) +
             statusIds.map { it.toByte() }.toByteArray()
